@@ -1,0 +1,126 @@
+# Focus Garden — Third-Party Notices
+
+This independent application extends Focuser. Its MIT license does not replace the separate licenses of dependencies, fonts, generated code, system frameworks, or other third-party material.
+
+Audit target: `focuser-ui`, `aarch64-apple-darwin`; package versions from the locked Cargo dependency graph and the actually installed frontend packages, inspected on 2026-09-21. No dependency was compiled or upgraded to prepare this inventory.
+
+## Inventory and included license texts
+
+- [Human-readable dependency inventory](docs/licenses/INVENTORY.md)
+- [Machine-readable inventory, provenance, versions and source archive checksums](docs/licenses/inventory.json)
+- Original license and notice texts: `docs/licenses/rust/`, `docs/licenses/npm/`.
+- Input lockfile hashes and notice-file hashes are preserved in `docs/licenses/inventory.json` and `docs/licenses/SHA256SUMS`.
+
+The Rust inventory contains 311 package/version entries: 233 reachable through normal runtime dependencies and 78 used only by build/procedural-macro paths. Normal dependencies of procedural macros are classified as build-time unless also reached by a runtime path. All development-only edges are excluded. Target-specific edges are filtered for Apple Silicon macOS.
+
+The frontend inventory contains 108 installed non-development lockfile entries, plus the directly imported `tw-animate-css` stylesheet and the Paraglide generator whose generated runtime is shipped. Type-only dependencies are labeled separately. The installed versions matched the lockfile. This is a conservative dependency/source inventory: dead-code elimination and frontend tree-shaking may exclude unused code. It is not a claim that all listed bytes are present in the final executable.
+
+Declared license expressions are retained verbatim. They include MIT, Apache-2.0, BSD variants, ISC, Zlib, Unicode-3.0, MPL-2.0, OFL-1.1 and permitted dual-license choices. No GPL or AGPL expression was found in this target dependency closure. This statement is limited to the resolved metadata and source notices examined here; it is not a universal scan of every upstream repository.
+
+## Focuser base application
+
+Upstream: https://github.com/aadeshrao123/Focuser
+
+Base revision: `c49a980f4b2b9c09c4520001a0cdc4f11466feff`.
+
+The application is a modified independent fork. Focus Garden adds a local garden/session ledger, Chinese garden UI and a separate macOS guard runtime, and changes application identity/packaging. Original upstream attribution is retained below in full.
+
+MIT License
+
+Copyright (c) 2026 Focuser Contributors
+Copyright (c) 2026 Focus Garden Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+## mado 0.0.21
+
+Source: https://crates.io/crates/mado/0.0.21
+
+Repository subdirectory: https://github.com/builder-group/abstand/tree/develop/crates/mado
+
+Only the independently MIT-licensed `mado` crate is reused. The AGPL license at the Abstand repository root is not applied to this independently licensed subdirectory, and Abstand application code was not copied as part of this reuse. The exact published crate's MIT text is reproduced below.
+
+MIT License
+
+Copyright (c) 2024 @bennobuilder
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+## swift-rs and SwiftRs
+
+Two independently resolved components are recorded:
+
+1. The Rust `swift-rs` crate, version 1.0.8, copied to `vendor/swift-rs`. The local build compatibility patch detects modern SwiftPM static archive output and restores only the explicitly declared `retain_object` / `release_object` exports in Mado's embedded `SwiftRs.o`, retaining the unique-definition guard. Required `llvm-objcopy` failures stop the build. Runtime function implementations are unchanged; `vendor/README.md` records the scope and build-tool prerequisite. Original [MIT](docs/licenses/rust/swift-rs-1.0.8/LICENSE-MIT) and [Apache-2.0](docs/licenses/rust/swift-rs-1.0.8/LICENSE-APACHE) texts are retained.
+2. The SwiftPM `SwiftRs` component fetched by mado, pinned to `e0b4a5f444a4204efa8e8270468318bc7836fcce` in `brendonovich/swift-rs`. Its [MIT](docs/licenses/swift-rs-e0b4a5f444a4204efa8e8270468318bc7836fcce/LICENSE-MIT) and [Apache-2.0](docs/licenses/swift-rs-e0b4a5f444a4204efa8e8270468318bc7836fcce/LICENSE-APACHE) texts were copied from the actual SwiftPM checkout.
+
+Both declare `MIT OR Apache-2.0`; neither is relabeled as solely MIT. The MIT copyright is `Copyright (c) 2023 The swift-rs Developers`.
+
+## MPL-2.0 components and source availability
+
+The target dependency graph contains the following unchanged MPL-2.0 packages:
+
+- `cssparser` 0.29.6
+- `cssparser-macros` 0.6.1
+- `selectors` 0.24.0
+- `dtoa-short` 0.3.5
+- `option-ext` 0.2.0
+
+Their exact published source archives are included in `docs/licenses/mpl-source/`, with SHA-256 hashes in the inventory. Original license text is preserved with each package's notices. These archives provide recipients the corresponding original package source; they can be extracted with an ordinary archive utility. Source archive download URLs are also recorded. MPL-covered files have not been relicensed as MIT or edited by Focus Garden.
+
+## Fonts, icons, CSS and SQLite
+
+- **Inter Variable**, via `@fontsource-variable/inter` 5.3.0, is self-hosted in the application. Copyright 2016 The Inter Project Authors. It remains under [SIL Open Font License 1.1](docs/licenses/npm/@fontsource-variable__inter-5.3.0/LICENSE); it is not relicensed as MIT. No Google Fonts network service is required.
+- **Lucide React** icons and their inherited icon notices retain the exact license expression and original text in the npm inventory (`ISC` as declared by the installed package, with any bundled attribution retained). Other icon/component libraries retain their own notices.
+- **Tailwind CSS** and **tw-animate-css** produce or supply bundled styles; their original licenses are included even when the package manager classifies tooling as development dependencies.
+- **SQLite** is bundled by `libsqlite3-sys` under the upstream public-domain dedication, separately from the Rust wrapper's MIT terms. Its [original source header](docs/licenses/SQLite-source-header.txt) is retained. The crate contains optional SQLCipher source and its BSD notice; keeping that notice does not claim SQLCipher is enabled in this application.
+
+## macOS system components
+
+The app uses macOS-provided frameworks such as AppKit, Foundation, WebKit, CoreGraphics, CoreFoundation and ApplicationServices through Rust/Swift bindings. Apple system frameworks, the Swift runtime supplied by the toolchain/system, system fallback fonts and system emoji remain subject to Apple's respective platform/SDK terms; they are not represented as project-owned MIT source. No Apple system font file or framework binary was copied into this notice/source collection. Open-source wrapper bindings keep their own licenses, listed in the inventory.
+
+## Explicit upstream notice gaps
+
+An explicit package license declaration is different from a complete standalone notice file. These gaps are retained for review rather than silently marked as fully verified:
+
+- `convert_case` 0.4.0 declares MIT, but its published source and inspected package revision omit a standalone LICENSE. The original manifest/README and standard MIT permission/warranty text are included; no copyright holder is invented.
+- `fxhash` 0.2.1 declares Apache-2.0/MIT. Its published source omits full standalone license files but includes the original Rust Project Developers 2015 copyright and dual-license header. The original header, manifest and standard MIT terms are retained.
+- `mac` 0.1.1 declares MIT/Apache-2.0, with the same license statement in its README, but no standalone license text was present in the package or inspected upstream root. Original declarations and standard MIT terms are retained.
+- `react-remove-scroll-bar` 2.3.8 declares MIT, but its npm tarball omits LICENSE. The npm `gitHead` returned GitHub 404 at inspection. An original MIT license was preserved from a pinned current upstream commit; the inventory explicitly marks it as not verified against that exact release revision.
+
+No GPL/AGPL dependency was found to require treating Focus Garden as an AGPL fork. The old-package notice gaps above must not be described as “all upstream exact-version license texts fully verified.” No upstream copyright statement was guessed or removed.
+
+## Distribution
+
+Distribute this file together with `LICENSE` and the complete `docs/licenses` directory. They are intended to be included in the installed application resources as well as the complete source delivery. Retain the original notices when redistributing source or binaries; dependency updates require refreshing the version inventory and matching license texts.

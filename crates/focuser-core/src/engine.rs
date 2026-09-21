@@ -1,0 +1,445 @@
+use focuser_common::error::Result;
+use focuser_common::extension::ExtensionRuleSet;
+use focuser_common::host::hosts_entries;
+use focuser_common::ipc::ProtectionInfo;
+use focuser_common::types::{BlockList, EntityId, ExceptionType, WebsiteMatchType};
+use tracing::{debug, info, warn};
+
+use crate::db::Database;
+
+/// The blocking engine evaluates rules against domains and processes.
+///
+/// It loads block lists from the database and determines what should be blocked.
+pub struct BlockEngine {
+    db: Database,
+    /// Cached block lists for fast evaluation (refreshed periodically).
+    cached_lists: Vec<BlockList>,
+}
+
+impl BlockEngine {
+    pub fn new(db: Database) -> Result<Self> {
+        let cached_lists = db.list_block_lists()?;
+        info!(count = cached_lists.len(), "Block engine initialized");
+        Ok(Self { db, cached_lists })
+    }
+
+    /// Reload block lists from the database.
+    pub fn refresh(&mut self) -> Result<()> {
+        self.cached_lists = self.db.list_block_lists()?;
+        debug!(count = self.cached_lists.len(), "Refreshed block lists");
+        Ok(())
+    }
+
+    /// Check if a domain should be blocked.
+    /// Returns the name of the first matching block list, or None.
+    pub fn check_domain(&self, domain: &str) -> Option<&str> {
+        for list in &self.cached_lists {
+            if list.should_block_domain(domain) {
+                return Some(&list.name);
+            }
+        }
+        None
+    }
+
+    /// Check if an app should be blocked.
+    /// Returns the name of the first matching block list, or None.
+    pub fn check_app(
+        &self,
+        process_name: &str,
+        exe_path: Option<&str>,
+        window_title: Option<&str>,
+    ) -> Option<&str> {
+        for list in &self.cached_lists {
+            if list.should_block_app(process_name, exe_path, window_title) {
+                return Some(&list.name);
+            }
+        }
+        None
+    }
+
+    /// Collect all domains that need to be blocked (for hosts file generation).
+    pub fn collect_blocked_domains(&self) -> Vec<String> {
+        let mut domains = Vec::new();
+        for list in &self.cached_lists {
+            if !list.is_effectively_active() {
+                continue;
+            }
+            for rule in &list.websites {
+                if !rule.enabled {
+                    continue;
+                }
+                match &rule.match_type {
+                    focuser_common::types::WebsiteMatchType::Domain(d) => {
+                        // A hosts file has no wildcards, so both forms are listed.
+                        domains.extend(hosts_entries(d));
+                    }
+                    _ => {
+                        // Wildcard, keyword, URL path, and entire internet
+                        // can't be represented in hosts file alone.
+                        // These need DNS proxy or browser extension support.
+                        warn!(
+                            rule = ?rule.match_type,
+                            "Rule type requires DNS proxy — hosts file only supports exact domains"
+                        );
+                    }
+                }
+            }
+        }
+        domains.sort();
+        domains.dedup();
+        domains
+    }
+
+    /// Compile all active rules into an `ExtensionRuleSet` that can be pushed
+    /// to a connected browser extension.
+    ///
+    /// This separates rules by type: domains go to both hosts file AND extension,
+    /// while keywords/wildcards/URL paths are extension-only.
+    pub fn compile_extension_rules(&self) -> ExtensionRuleSet {
+        self.compile_extension_rules_with_exceptions(&[])
+    }
+
+    /// Same as `compile_extension_rules` but adds extra domains to the
+    /// `allowed_domains` set. Used to inject allowance-active domains so
+    /// they act as temporary exceptions until the daily quota is hit.
+    pub fn compile_extension_rules_with_exceptions(
+        &self,
+        extra_allowed_domains: &[String],
+    ) -> ExtensionRuleSet {
+        let mut rules = ExtensionRuleSet::empty();
+
+        for list in &self.cached_lists {
+            if !list.is_effectively_active() {
+                continue;
+            }
+
+            // Compile website rules by type
+            for rule in &list.websites {
+                if !rule.enabled {
+                    continue;
+                }
+                match &rule.match_type {
+                    WebsiteMatchType::Domain(d) => {
+                        rules.blocked_domains.extend(hosts_entries(d));
+                    }
+                    WebsiteMatchType::Keyword(kw) => {
+                        rules.blocked_keywords.push(kw.clone());
+                    }
+                    WebsiteMatchType::Wildcard(pat) => {
+                        rules.blocked_wildcards.push(pat.clone());
+                    }
+                    WebsiteMatchType::UrlPath(path) => {
+                        rules.blocked_url_paths.push(path.clone());
+                    }
+                    WebsiteMatchType::EntireInternet => {
+                        rules.block_entire_internet = true;
+                    }
+                }
+            }
+
+            // Compile exceptions
+            for exc in &list.exceptions {
+                if !exc.enabled {
+                    continue;
+                }
+                match &exc.exception_type {
+                    ExceptionType::Domain(d) => {
+                        // Both forms, for the same reason as blocked domains —
+                        // an exception must release whichever one is listed.
+                        rules.allowed_domains.extend(hosts_entries(d));
+                    }
+                    ExceptionType::Wildcard(pat) => {
+                        rules.allowed_wildcards.push(pat.clone());
+                    }
+                    ExceptionType::LocalFiles => {
+                        // Extension handles this natively via URL scheme check
+                    }
+                }
+            }
+        }
+
+        // Inject allowance-exempt domains as exceptions — the domain is
+        // accessible until today's quota runs out.
+        for d in extra_allowed_domains {
+            rules.allowed_domains.extend(hosts_entries(d));
+        }
+
+        rules.blocked_domains.sort();
+        rules.blocked_domains.dedup();
+        rules.blocked_keywords.sort();
+        rules.blocked_keywords.dedup();
+        rules.blocked_wildcards.sort();
+        rules.blocked_wildcards.dedup();
+        rules.blocked_url_paths.sort();
+        rules.blocked_url_paths.dedup();
+        rules.allowed_domains.sort();
+        rules.allowed_domains.dedup();
+        rules.allowed_wildcards.sort();
+        rules.allowed_wildcards.dedup();
+
+        // Stable content-based version hash. Only changes when rules actually
+        // change — NOT on every call. This prevents the extension from treating
+        // every poll response as a rules update and re-running enforcement.
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+        let mut hasher = DefaultHasher::new();
+        rules.blocked_domains.hash(&mut hasher);
+        rules.blocked_keywords.hash(&mut hasher);
+        rules.blocked_wildcards.hash(&mut hasher);
+        rules.blocked_url_paths.hash(&mut hasher);
+        rules.block_entire_internet.hash(&mut hasher);
+        rules.allowed_domains.hash(&mut hasher);
+        rules.allowed_wildcards.hash(&mut hasher);
+        rules.version = hasher.finish();
+
+        rules
+    }
+
+    /// Check if any active rules require the browser extension to be enforced.
+    pub fn has_extension_only_rules(&self) -> bool {
+        self.compile_extension_rules().requires_extension()
+    }
+
+    // ─── Protection ──────────────────────────────────────────
+
+    pub fn has_uninstall_protection(&self) -> bool {
+        self.cached_lists
+            .iter()
+            .any(|l| l.has_uninstall_protection())
+    }
+
+    pub fn has_service_protection(&self) -> bool {
+        self.cached_lists.iter().any(|l| l.has_service_protection())
+    }
+
+    pub fn has_any_active_protection(&self) -> bool {
+        self.cached_lists.iter().any(|l| l.has_active_protection())
+    }
+
+    pub fn is_block_list_protected(&self, id: EntityId) -> bool {
+        self.cached_lists
+            .iter()
+            .find(|l| l.id == id)
+            .is_some_and(|l| l.is_modification_protected())
+    }
+
+    pub fn active_protection_info(&self) -> Vec<ProtectionInfo> {
+        self.cached_lists
+            .iter()
+            .filter(|l| l.has_active_protection())
+            .map(|l| {
+                let p = l.protection.as_ref().unwrap();
+                ProtectionInfo {
+                    block_list_id: l.id,
+                    block_list_name: l.name.clone(),
+                    prevent_uninstall: p.prevent_uninstall,
+                    prevent_service_stop: p.prevent_service_stop,
+                    prevent_modification: p.prevent_modification,
+                    remaining_seconds: p.remaining_seconds(),
+                    expires_at: p.expires_at,
+                }
+            })
+            .collect()
+    }
+
+    /// Record a blocked attempt in the database (daily aggregate + individual event).
+    pub fn record_blocked(&self, domain_or_app: &str) -> Result<()> {
+        self.db.record_blocked_attempt(domain_or_app)?;
+        let _ = self.db.record_blocked_event(domain_or_app);
+        Ok(())
+    }
+
+    /// Get a reference to the database.
+    pub fn db(&self) -> &Database {
+        &self.db
+    }
+
+    /// Get cached block lists.
+    pub fn block_lists(&self) -> &[BlockList] {
+        &self.cached_lists
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use focuser_common::types::{AppRule, BlockList, WebsiteRule};
+
+    fn setup_engine() -> BlockEngine {
+        let db = Database::open_in_memory().unwrap();
+
+        let mut social = BlockList::new("Social Media");
+        social.websites.push(WebsiteRule::domain("reddit.com"));
+        social.websites.push(WebsiteRule::domain("twitter.com"));
+        social.websites.push(WebsiteRule::domain("facebook.com"));
+        db.create_block_list(&social).unwrap();
+
+        let mut games = BlockList::new("Games");
+        games.applications.push(AppRule::executable("steam.exe"));
+        games
+            .websites
+            .push(WebsiteRule::domain("store.steampowered.com"));
+        db.create_block_list(&games).unwrap();
+
+        BlockEngine::new(db).unwrap()
+    }
+
+    #[test]
+    fn test_check_domain() {
+        let engine = setup_engine();
+        assert_eq!(engine.check_domain("reddit.com"), Some("Social Media"));
+        assert_eq!(engine.check_domain("www.reddit.com"), Some("Social Media"));
+        assert_eq!(engine.check_domain("example.com"), None);
+    }
+
+    #[test]
+    fn test_check_app() {
+        let engine = setup_engine();
+        assert_eq!(engine.check_app("steam.exe", None, None), Some("Games"));
+        assert_eq!(engine.check_app("chrome.exe", None, None), None);
+    }
+
+    #[test]
+    fn test_collect_blocked_domains() {
+        let engine = setup_engine();
+        let domains = engine.collect_blocked_domains();
+        assert!(domains.contains(&"reddit.com".to_string()));
+        assert!(domains.contains(&"www.reddit.com".to_string()));
+        assert!(domains.contains(&"twitter.com".to_string()));
+        assert!(domains.contains(&"store.steampowered.com".to_string()));
+    }
+
+    #[test]
+    fn test_extension_rules_domain_only() {
+        let engine = setup_engine();
+        let rules = engine.compile_extension_rules();
+
+        // Domain-only rules don't require the extension
+        assert!(!rules.requires_extension());
+        assert!(rules.blocked_domains.contains(&"reddit.com".to_string()));
+        assert!(rules.blocked_keywords.is_empty());
+        assert!(rules.blocked_wildcards.is_empty());
+        assert!(!rules.block_entire_internet);
+    }
+
+    #[test]
+    fn test_extension_rules_with_keywords() {
+        let db = Database::open_in_memory().unwrap();
+
+        let mut list = BlockList::new("Mixed");
+        list.websites.push(WebsiteRule::domain("reddit.com"));
+        list.websites.push(WebsiteRule::keyword("gambling"));
+        list.websites.push(WebsiteRule::wildcard("*.tiktok.*"));
+        list.websites
+            .push(WebsiteRule::url_path("youtube.com/shorts"));
+        db.create_block_list(&list).unwrap();
+
+        let engine = BlockEngine::new(db).unwrap();
+        let rules = engine.compile_extension_rules();
+
+        assert!(rules.requires_extension());
+        assert!(rules.blocked_domains.contains(&"reddit.com".to_string()));
+        assert!(rules.blocked_keywords.contains(&"gambling".to_string()));
+        assert!(rules.blocked_wildcards.contains(&"*.tiktok.*".to_string()));
+        assert!(
+            rules
+                .blocked_url_paths
+                .contains(&"youtube.com/shorts".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extension_rules_entire_internet_with_exceptions() {
+        let db = Database::open_in_memory().unwrap();
+
+        let mut list = BlockList::new("Nuclear");
+        list.websites.push(WebsiteRule::entire_internet());
+        list.exceptions
+            .push(focuser_common::types::ExceptionRule::domain("github.com"));
+        db.create_block_list(&list).unwrap();
+
+        let engine = BlockEngine::new(db).unwrap();
+        let rules = engine.compile_extension_rules();
+
+        assert!(rules.requires_extension());
+        assert!(rules.block_entire_internet);
+        assert!(rules.allowed_domains.contains(&"github.com".to_string()));
+    }
+
+    #[test]
+    fn test_has_extension_only_rules() {
+        // Domain-only engine
+        let engine = setup_engine();
+        assert!(!engine.has_extension_only_rules());
+
+        // Engine with keyword rule
+        let db = Database::open_in_memory().unwrap();
+        let mut list = BlockList::new("Keywords");
+        list.websites.push(WebsiteRule::keyword("game"));
+        db.create_block_list(&list).unwrap();
+        let engine = BlockEngine::new(db).unwrap();
+        assert!(engine.has_extension_only_rules());
+    }
+
+    fn engine_blocking(domain: &str) -> BlockEngine {
+        let db = Database::open_in_memory().unwrap();
+        let mut list = BlockList::new("Videos");
+        list.websites.push(WebsiteRule::domain(domain));
+        db.create_block_list(&list).unwrap();
+        BlockEngine::new(db).unwrap()
+    }
+
+    #[test]
+    fn hosts_and_extension_rules_list_both_www_forms_whichever_was_typed() {
+        for typed in ["youtube.com", "www.youtube.com"] {
+            let engine = engine_blocking(typed);
+
+            let hosts = engine.collect_blocked_domains();
+            assert!(
+                hosts.contains(&"youtube.com".to_string()),
+                "typed {typed:?}"
+            );
+            assert!(
+                hosts.contains(&"www.youtube.com".to_string()),
+                "typed {typed:?}"
+            );
+
+            let rules = engine.compile_extension_rules();
+            assert!(rules.blocked_domains.contains(&"youtube.com".to_string()));
+            assert!(
+                rules
+                    .blocked_domains
+                    .contains(&"www.youtube.com".to_string())
+            );
+        }
+    }
+
+    #[test]
+    fn an_exception_releases_both_www_forms() {
+        let mut engine = engine_blocking("youtube.com");
+        {
+            let mut list = engine.block_lists()[0].clone();
+            list.exceptions.push(focuser_common::types::ExceptionRule {
+                id: focuser_common::types::new_id(),
+                exception_type: focuser_common::types::ExceptionType::Domain(
+                    "www.youtube.com".into(),
+                ),
+                enabled: true,
+            });
+            engine.db().update_block_list(&list).unwrap();
+        }
+        engine.refresh().unwrap();
+
+        let rules = engine.compile_extension_rules();
+        assert!(rules.allowed_domains.contains(&"youtube.com".to_string()));
+        assert!(
+            rules
+                .allowed_domains
+                .contains(&"www.youtube.com".to_string())
+        );
+
+        // And the engine itself stops blocking either form.
+        assert!(engine.check_domain("youtube.com").is_none());
+        assert!(engine.check_domain("www.youtube.com").is_none());
+    }
+}

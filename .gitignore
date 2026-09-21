@@ -1,0 +1,91 @@
+# ─── Rust / Cargo ────────────────────────────────────────
+/target/
+**/*.rs.bk
+# Cargo.lock is committed for reproducible CI builds
+
+# ─── Database ────────────────────────────────────────────
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# ─── Logs ────────────────────────────────────────────────
+*.log
+logs/
+
+# ─── OS files ────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
+
+# ─── IDE / Editor ────────────────────────────────────────
+.idea/
+.vscode/
+*.iml
+.fleet/
+
+# ─── Environment / Secrets ───────────────────────────────
+.env
+.env.*
+!.env.example
+!.env.submit.example
+*.pem
+*.key
+credentials.json
+
+# ─── Frontend / Node ────────────────────────────────────
+# Path-agnostic on purpose: these were previously pinned to
+# crates/focuser-ui/ui/, so the new frontend/ directory was not covered and
+# node_modules showed up as untracked.
+node_modules/
+dist/
+.vite/
+vite.config.ts.timestamp-*
+*.tsbuildinfo
+.eslintcache
+
+# npm/pnpm/yarn diagnostics
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ─── Build artifacts ─────────────────────────────────────
+*.exe
+*.dll
+*.so
+*.dylib
+!crates/  # don't ignore the crates directory
+
+# ─── Distribution / Packaging ────────────────────────────
+dist/
+*.msi
+*.dmg
+*.deb
+*.rpm
+*.AppImage
+# Sidecar binaries (built by CI, not committed)
+crates/focuser-ui/binaries/
+
+# ─── Internal working docs (local only, never pushed) ────
+# Per-task plans, progress logs, gotchas. See internal-docs/README.md
+internal-docs/
+
+# ─── Claude Code local config ────────────────────────────
+.claude/
+
+# WXT build output and generated types
+extension/.output/
+extension/.wxt/
+extension/stats.html
+
+# Local acceptance artifacts and personal data are never published.
+/evidence/
+*.sqlite3-wal
+*.sqlite3-shm
+*.sqlite3-journal
