@@ -122,7 +122,7 @@ export function Allowances() {
               onCommit={setMinutes}
               min={1}
               max={1440}
-              suffix="min"
+              suffix={m.allowances_minutes_suffix()}
             />
           </Labelled>
 
@@ -204,7 +204,7 @@ function AllowanceRow({ status }: { status: AllowanceStatus }) {
               onCommit={(m) => save({ dailyLimitSecs: m * 60 })}
               min={1}
               max={1440}
-              suffix="min"
+              suffix={m.allowances_minutes_suffix()}
               aria-describedby={`allowance-${a.id}-usage`}
             />
             <Switch

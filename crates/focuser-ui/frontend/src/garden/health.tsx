@@ -11,6 +11,15 @@ export interface MacHealth {
   website_blocking_available: boolean;
   front_browser: string | null;
   front_url_available: boolean;
+  front_app: {
+    pid: number;
+    name: string;
+    bundle_id: string;
+    regular_app: boolean;
+    protected: boolean;
+    protection_reason: string | null;
+  } | null;
+  matched_rule: string | null;
   automation: { browser: string; bundle_id: string; status: string }[];
   last_error: string | null;
   blocked_apps: number;
@@ -116,6 +125,26 @@ export function PermissionPanel() {
             : "前台监测未就绪"}{" "}
         · {data?.website_blocking_available ? "已有浏览器的网站限制就绪" : "浏览器网站限制尚未就绪"}
       </p>
+      <details className="garden-monitor-details">
+        <summary>当前监测信息</summary>
+        <p className="garden-muted">
+          当前应用：
+          {data?.front_app?.name ??
+            (data?.rules_active ? "尚未读取到前台应用" : "没有活动规则，等待开始")}
+        </p>
+        {data?.front_app && (
+          <p className="garden-muted">
+            {data.front_app.protected
+              ? `保护原因：${data.front_app.protection_reason ?? "此应用保留用于安全操作和恢复"}`
+              : "该应用可由应用规则限制。"}
+          </p>
+        )}
+        {data?.front_app && (
+          <p className="garden-muted">
+            {data.matched_rule ? `匹配规则：${data.matched_rule}` : "本次检查未匹配限制规则。"}
+          </p>
+        )}
+      </details>
       <GardenError error={permission.error ?? health.error ?? data?.last_error} />
     </section>
   );

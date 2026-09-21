@@ -1,0 +1,26 @@
+{
+  "recorded_at": "2026-09-21T05:04:54.658746-04:00",
+  "kern_boottime": "{ sec = 1789915723, usec = 663935 } Sun Sep 20 10:48:43 2026",
+  "reboot_performed": false,
+  "installed_app": "/Users/gls/Applications/Focus Garden.app",
+  "expected_login_startup": true,
+  "expected_global_events": {
+    "app": 2,
+    "website": 6
+  },
+  "expected_garden": {
+    "elapsed_seconds": 496,
+    "xp": 7,
+    "level": 1,
+    "completed_sessions": 1,
+    "interrupted_sessions": 3
+  },
+  "expected_disabled_test_rules": true,
+  "resume_checks": [
+    "verify boot time changed",
+    "verify automatic startup before opening app",
+    "check history and settings",
+    "check Accessibility and three browser permissions",
+    "repeat controlled block and release then disable test rules"
+  ]
+}

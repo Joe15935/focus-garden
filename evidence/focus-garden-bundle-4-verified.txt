@@ -1,0 +1,94 @@
+info: component llvm-tools is up to date
+
+> focuser-frontend@0.7.3 postinstall
+> npm run paraglide
+
+
+> focuser-frontend@0.7.3 paraglide
+> paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --strategy localStorage baseLocale --output-structure message-modules --emit-ts-declarations
+
+ℹ [paraglide-js] Compiling inlang project ...
+✔ [paraglide-js] Successfully compiled inlang project.
+
+added 280 packages, and audited 281 packages in 10s
+
+41 packages are looking for funding
+  run `npm fund` for details
+
+4 vulnerabilities (3 moderate, 1 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues, run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+npm warn install-scripts 1 package has install scripts not yet covered by allowScripts:
+npm warn install-scripts   fsevents@2.3.3 (install: (install scripts present))
+npm warn install-scripts
+npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+
+> focuser-frontend@0.7.3 build
+> tsc --noEmit && vite build
+
+vite v8.1.5 building client environment for production...
+✔ [paraglide-js] Compilation complete (message-modules)
+[2Ktransforming...✓ 2354 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                              0.41 kB │ gzip:   0.29 kB
+dist/assets/inter-vietnamese-wght-normal-CBcvBZtf.woff2     10.25 kB
+dist/assets/inter-greek-ext-wght-normal-DlzME5K_.woff2      11.23 kB
+dist/assets/inter-cyrillic-wght-normal-DqGufNeO.woff2       18.74 kB
+dist/assets/inter-greek-wght-normal-CkhJZR-_.woff2          18.99 kB
+dist/assets/inter-cyrillic-ext-wght-normal-BOeWTOD4.woff2   25.96 kB
+dist/assets/inter-latin-wght-normal-Dx4kXJAl.woff2          48.25 kB
+dist/assets/inter-latin-ext-wght-normal-DO1Apj_S.woff2      85.06 kB
+dist/assets/index-CycOsQt2.css                              79.31 kB │ gzip:  14.83 kB
+dist/assets/statistics-C52VMLUu.js                           7.08 kB │ gzip:   2.67 kB
+dist/assets/index-BhGahSmf.js                              740.28 kB │ gzip: 232.95 kB
+
+✓ built in 2.93s
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `npm run build`
+
+> focuser-frontend@0.7.3 build
+> tsc --noEmit && vite build
+
+vite v8.1.5 building client environment for production...
+✔ [paraglide-js] Compilation complete (message-modules)
+[2Ktransforming...✓ 2354 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                              0.41 kB │ gzip:   0.29 kB
+dist/assets/inter-vietnamese-wght-normal-CBcvBZtf.woff2     10.25 kB
+dist/assets/inter-greek-ext-wght-normal-DlzME5K_.woff2      11.23 kB
+dist/assets/inter-cyrillic-wght-normal-DqGufNeO.woff2       18.74 kB
+dist/assets/inter-greek-wght-normal-CkhJZR-_.woff2          18.99 kB
+dist/assets/inter-cyrillic-ext-wght-normal-BOeWTOD4.woff2   25.96 kB
+dist/assets/inter-latin-wght-normal-Dx4kXJAl.woff2          48.25 kB
+dist/assets/inter-latin-ext-wght-normal-DO1Apj_S.woff2      85.06 kB
+dist/assets/index-CycOsQt2.css                              79.31 kB │ gzip:  14.83 kB
+dist/assets/statistics-C52VMLUu.js                           7.08 kB │ gzip:   2.67 kB
+dist/assets/index-BhGahSmf.js                              740.28 kB │ gzip: 232.95 kB
+
+✓ built in 3.00s
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+   Compiling focuser-ui v0.7.3 (/Users/gls/Projects/focus-garden/crates/focuser-ui)
+    Finished `release` profile [optimized] target(s) in 20.45s
+       Built application at: /Users/gls/Projects/focus-garden/target/release/focuser-ui
+    Bundling Focus Garden.app (/Users/gls/Projects/focus-garden/target/release/bundle/macos/Focus Garden.app)
+    Finished 1 bundle at:
+        /Users/gls/Projects/focus-garden/target/release/bundle/macos/Focus Garden.app
+
+target/release/bundle/macos/Focus Garden.app: replacing existing signature

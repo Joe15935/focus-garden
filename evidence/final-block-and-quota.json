@@ -1,0 +1,51 @@
+{
+  "blocked_events": [
+    {
+      "id": 1,
+      "domain_or_app": "website:example.com",
+      "timestamp": "2026-09-21T05:53:49.328592+00:00"
+    },
+    {
+      "id": 2,
+      "domain_or_app": "website:example.net",
+      "timestamp": "2026-09-21T05:57:00.663764+00:00"
+    },
+    {
+      "id": 3,
+      "domain_or_app": "website:example.com",
+      "timestamp": "2026-09-21T05:58:39.817359+00:00"
+    },
+    {
+      "id": 4,
+      "domain_or_app": "app:com.google.Chrome",
+      "timestamp": "2026-09-21T08:41:54.850833+00:00"
+    },
+    {
+      "id": 5,
+      "domain_or_app": "app:com.apple.calculator",
+      "timestamp": "2026-09-21T08:42:09.025056+00:00"
+    },
+    {
+      "id": 6,
+      "domain_or_app": "website:example.com",
+      "timestamp": "2026-09-21T08:47:22.283092+00:00"
+    },
+    {
+      "id": 7,
+      "domain_or_app": "website:example.com",
+      "timestamp": "2026-09-21T08:48:00.284220+00:00"
+    },
+    {
+      "id": 8,
+      "domain_or_app": "website:example.com",
+      "timestamp": "2026-09-21T08:48:13.730848+00:00"
+    }
+  ],
+  "allowance_usage": [
+    {
+      "allowance_id": "99051e4e-d294-4c29-beb5-adb549008570",
+      "usage_date": "2026-09-21",
+      "used_secs": 60
+    }
+  ]
+}

@@ -1,7 +1,20 @@
+import { getLocale } from "@/paraglide/runtime.js";
+import { m } from "@/paraglide/messages.js";
 import type { TimeSlot } from "@/bindings";
 
 export const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 export type Day = (typeof DAYS)[number];
+const CHINESE_DAYS: Record<Day, string> = {
+  Mon: "周一",
+  Tue: "周二",
+  Wed: "周三",
+  Thu: "周四",
+  Fri: "周五",
+  Sat: "周六",
+  Sun: "周日",
+};
+/** Localized labels never replace the stable weekday keys sent to Rust. */
+export const dayLabel = (day: Day): string => (getLocale() === "zh" ? CHINESE_DAYS[day] : day);
 
 export const HOURS = Array.from({ length: 24 }, (_, h) => h);
 
@@ -76,8 +89,8 @@ export function hoursOn(cells: Set<CellKey>, day: Day): number {
 /** "9am–5pm", "9am–12pm, 2–5pm", or "Off". Used in the week summary. */
 export function describeDay(cells: Set<CellKey>, day: Day): string {
   const runs = runsForDay(cells, day);
-  if (runs.length === 0) return "Off";
-  if (runs.length === 1 && runs[0][0] === 0 && runs[0][1] === 24) return "All day";
+  if (runs.length === 0) return m.grid_legend_off();
+  if (runs.length === 1 && runs[0][0] === 0 && runs[0][1] === 24) return m.schedule_all_day();
   return runs.map(([start, end]) => `${formatHour(start)}–${formatHour(end % 24)}`).join(", ");
 }
 
@@ -108,22 +121,30 @@ const range = (from: number, to: number) => HOURS.filter((h) => h >= from && h <
 export const PRESETS: { id: string; label: string; build: () => Set<CellKey> }[] = [
   {
     id: "work",
-    label: "Work hours",
+    get label() {
+      return getLocale() === "zh" ? "工作时间" : "Work hours";
+    },
     build: () => fill(["Mon", "Tue", "Wed", "Thu", "Fri"], range(9, 17)),
   },
   {
     id: "evenings",
-    label: "Evenings",
+    get label() {
+      return getLocale() === "zh" ? "晚间" : "Evenings";
+    },
     build: () => fill([...DAYS], range(18, 24)),
   },
   {
     id: "weekends",
-    label: "Weekends",
+    get label() {
+      return getLocale() === "zh" ? "周末" : "Weekends";
+    },
     build: () => fill(["Sat", "Sun"], HOURS),
   },
   {
     id: "always",
-    label: "Every hour",
+    get label() {
+      return getLocale() === "zh" ? "全天" : "Every hour";
+    },
     build: () => fill([...DAYS], HOURS),
   },
 ];
@@ -135,6 +156,7 @@ function fill(days: Day[], hours: number[]): Set<CellKey> {
 }
 
 export function formatHour(hour: number) {
+  if (getLocale() === "zh") return `${pad(hour)}:00`;
   if (hour === 0) return "12am";
   if (hour === 12) return "12pm";
   return hour < 12 ? `${hour}am` : `${hour - 12}pm`;

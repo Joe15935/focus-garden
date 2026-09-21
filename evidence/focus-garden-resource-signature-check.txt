@@ -1,0 +1,59 @@
+Focus Garden resource and signature verification
+Verified UTC: 2026-09-21T05:57:15.502048+00:00
+
+Scope: read-only comparisons and codesign verification; no app contents or signatures modified by this audit.
+Earlier artifact verification failed because Contents/_CodeSignature/CodeResources was missing.
+Root reported signing the build artifact only; the final verification below was performed independently afterward.
+
+Source: /Users/gls/Projects/focus-garden/README.md
+Source SHA256: fcf5305af95a34166e52479c3b09b0a953962722e84a1ff2bf9e1ed51feaa4ea
+Installed resource: /Users/gls/Applications/Focus Garden.app/Contents/Resources/README.md
+MISSING: README.md is not included in tauri.conf.json resources; other requested documents are configured.
+Build artifact resource: /Users/gls/Projects/focus-garden/target/release/bundle/macos/Focus Garden.app/Contents/Resources/README.md
+MISSING: README.md is not included in tauri.conf.json resources; other requested documents are configured.
+
+Source: /Users/gls/Projects/focus-garden/docs/使用说明.md
+Source SHA256: 4d8129bacd740682798d433899ace013b894a7f2f48bed04e40b7ca713c6f9d7
+Installed resource: /Users/gls/Applications/Focus Garden.app/Contents/Resources/docs/使用说明.md
+MATCH SHA256: 4d8129bacd740682798d433899ace013b894a7f2f48bed04e40b7ca713c6f9d7
+Build artifact resource: /Users/gls/Projects/focus-garden/target/release/bundle/macos/Focus Garden.app/Contents/Resources/docs/使用说明.md
+MATCH SHA256: 4d8129bacd740682798d433899ace013b894a7f2f48bed04e40b7ca713c6f9d7
+
+Source: /Users/gls/Projects/focus-garden/docs/数据与恢复.md
+Source SHA256: 35ef1cb03579f826132c35cc0154cd10d4a278cf1d0f27a8ab81e73089253738
+Installed resource: /Users/gls/Applications/Focus Garden.app/Contents/Resources/docs/数据与恢复.md
+MATCH SHA256: 35ef1cb03579f826132c35cc0154cd10d4a278cf1d0f27a8ab81e73089253738
+Build artifact resource: /Users/gls/Projects/focus-garden/target/release/bundle/macos/Focus Garden.app/Contents/Resources/docs/数据与恢复.md
+MATCH SHA256: 35ef1cb03579f826132c35cc0154cd10d4a278cf1d0f27a8ab81e73089253738
+
+Source: /Users/gls/Projects/focus-garden/LICENSE
+Source SHA256: cffa043d5cdcc8ad213c3509c6b08dd2d39e2545ec06524e4cb39216f9c7ddba
+Installed resource: /Users/gls/Applications/Focus Garden.app/Contents/Resources/LICENSE
+MATCH SHA256: cffa043d5cdcc8ad213c3509c6b08dd2d39e2545ec06524e4cb39216f9c7ddba
+Build artifact resource: /Users/gls/Projects/focus-garden/target/release/bundle/macos/Focus Garden.app/Contents/Resources/LICENSE
+MATCH SHA256: cffa043d5cdcc8ad213c3509c6b08dd2d39e2545ec06524e4cb39216f9c7ddba
+
+Source: /Users/gls/Projects/focus-garden/THIRD_PARTY_NOTICES
+Source SHA256: 071c7bbf75d686aece61ba5189f1df42b3f9562b6b473cc2e11133409c857cef
+Installed resource: /Users/gls/Applications/Focus Garden.app/Contents/Resources/THIRD_PARTY_NOTICES
+MATCH SHA256: 071c7bbf75d686aece61ba5189f1df42b3f9562b6b473cc2e11133409c857cef
+Build artifact resource: /Users/gls/Projects/focus-garden/target/release/bundle/macos/Focus Garden.app/Contents/Resources/THIRD_PARTY_NOTICES
+MATCH SHA256: 071c7bbf75d686aece61ba5189f1df42b3f9562b6b473cc2e11133409c857cef
+
+Installed whole-bundle signature: PASS
+Exit status: 0
+
+/Users/gls/Applications/Focus Garden.app: valid on disk
+/Users/gls/Applications/Focus Garden.app: satisfies its Designated Requirement
+
+Build artifact whole-bundle signature: PASS
+Exit status: 0
+
+/Users/gls/Projects/focus-garden/target/release/bundle/macos/Focus Garden.app: valid on disk
+/Users/gls/Projects/focus-garden/target/release/bundle/macos/Focus Garden.app: satisfies its Designated Requirement
+
+Evidence copies preserve the original build logs byte for byte:
+evidence/focus-garden-acceptance-check.txt
+evidence/focus-garden-bundle-3.txt
+
+No installation update is needed for the four matched bundled documents. README remains available in the source checkout; bundling it can wait for a future release to avoid disturbing the installed signature and permissions.

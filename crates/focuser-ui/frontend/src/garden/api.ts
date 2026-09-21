@@ -81,10 +81,15 @@ export async function gardenCommand<T = unknown>(cmd: string, args?: unknown): P
   }
 }
 export function errorText(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  if (typeof error === "object" && error !== null && "message" in error)
-    return String(error.message);
-  return String(error ?? "操作未完成，请重试。");
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "object" && error !== null && "message" in error
+        ? String(error.message)
+        : String(error ?? "");
+  if (/[\u3400-\u9fff]/u.test(message)) return message;
+  if (message) console.error("Focus Garden command failed:", error);
+  return "暂时无法完成操作，请稍后重试。";
 }
 export function useGarden() {
   return useQuery({

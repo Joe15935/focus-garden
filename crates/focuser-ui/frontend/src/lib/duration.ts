@@ -1,5 +1,15 @@
+import { getLocale } from "@/paraglide/runtime.js";
+
 /** Human-readable spans: "45s", "12m", "1h 24m". */
 export function formatDuration(seconds: number): string {
+  if (getLocale() === "zh") {
+    if (seconds < 60) return `${Math.round(seconds)} 秒`;
+    const minutes = Math.round(seconds / 60);
+    if (minutes < 60) return `${minutes} 分钟`;
+    const remainder = minutes % 60;
+    const hours = Math.floor(minutes / 60);
+    return remainder ? `${hours} 小时 ${remainder} 分` : `${hours} 小时`;
+  }
   if (seconds < 60) return `${Math.round(seconds)}s`;
 
   const minutes = Math.round(seconds / 60);

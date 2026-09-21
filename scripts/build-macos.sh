@@ -13,6 +13,5 @@ cd ..
 npx --yes @tauri-apps/cli@2.10.1 build --bundles app
 
 cd ../..
-cd ..
 codesign --force --deep --sign - --identifier org.focusgarden.local "target/release/bundle/macos/Focus Garden.app"
 codesign --verify --deep --strict "target/release/bundle/macos/Focus Garden.app"

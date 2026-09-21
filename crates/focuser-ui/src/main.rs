@@ -96,6 +96,9 @@ fn main() {
             let setup_garden = garden.clone();
             app.manage(state);
             app.manage(garden);
+            let guarded_quit = MenuItemBuilder::with_id("app-quit", "退出专注花园")
+                .accelerator("CmdOrCtrl+Q")
+                .build(app)?;
             let application_menu = Submenu::with_items(
                 app,
                 "专注花园",
@@ -107,7 +110,7 @@ fn main() {
                     &PredefinedMenuItem::hide_others(app, Some("隐藏其他应用"))?,
                     &PredefinedMenuItem::show_all(app, Some("显示全部"))?,
                     &PredefinedMenuItem::separator(app)?,
-                    &PredefinedMenuItem::quit(app, Some("退出专注花园"))?,
+                    &guarded_quit,
                 ],
             )?;
             let edit_menu = Submenu::with_items(
@@ -138,6 +141,19 @@ fn main() {
                     .items(&[&application_menu, &edit_menu, &window_menu])
                     .build()?,
             )?;
+            app.on_menu_event(|app, event| {
+                if event.id().as_ref() == "app-quit" {
+                    let allowed = app
+                        .try_state::<GardenState>()
+                        .is_none_or(|garden| garden_bridge::may_quit(&garden));
+                    if allowed {
+                        app.exit(0);
+                    } else {
+                        show(app);
+                        let _ = app.emit("garden-exit-requested", "请先在首页申请提前结束。");
+                    }
+                }
+            });
             let open = MenuItemBuilder::with_id("open", "打开专注花园").build(app)?;
             let quit = MenuItemBuilder::with_id("quit", "退出专注花园").build(app)?;
             let menu = MenuBuilder::new(app).items(&[&open, &quit]).build()?;

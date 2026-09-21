@@ -23,6 +23,7 @@ import {
   type CellKey,
   cellsToSlots,
   DAYS,
+  dayLabel,
   describeDay,
   HOURS,
   hoursOn,
@@ -156,11 +157,11 @@ function AlwaysPanel() {
       <div className="mt-6 grid grid-cols-7 gap-1.5">
         {DAYS.map((day) => (
           <div
-            key={day}
+            key={dayLabel(day)}
             className="rounded-lg bg-primary/15 px-2 py-3 text-center ring-1 ring-primary/20 ring-inset"
           >
-            <p className="font-medium text-primary text-xs">{day}</p>
-            <p className="mt-0.5 text-[10px] text-primary/70">24h</p>
+            <p className="font-medium text-primary text-xs">{dayLabel(day)}</p>
+            <p className="mt-0.5 text-[10px] text-primary/70">{formatDuration(24 * 3600)}</p>
           </div>
         ))}
       </div>
@@ -246,7 +247,9 @@ function WeekSummary({
             <span className="font-semibold text-3xl text-foreground tabular-nums">
               {formatDuration(total * 3600)}
             </span>
-            <span className="text-faint-foreground text-xs">of {WEEK_HOURS} hours</span>
+            <span className="text-faint-foreground text-xs">
+              {m.schedule_of_hours({ total: WEEK_HOURS })}
+            </span>
           </p>
         </div>
 
@@ -282,7 +285,7 @@ function WeekSummary({
           const on = cells ? hoursOn(cells, day) : HOURS.length;
           const text = cells ? describeDay(cells, day) : m.schedule_all_day();
           return (
-            <div key={day} className="bg-surface px-4 py-3">
+            <div key={dayLabel(day)} className="bg-surface px-4 py-3">
               <div className="flex items-baseline justify-between gap-2">
                 <span
                   className={cn(
@@ -290,7 +293,7 @@ function WeekSummary({
                     on > 0 ? "text-foreground" : "text-faint-foreground",
                   )}
                 >
-                  {day}
+                  {dayLabel(day)}
                 </span>
                 <span
                   className={cn(
@@ -298,7 +301,7 @@ function WeekSummary({
                     on > 0 ? "text-primary" : "text-faint-foreground",
                   )}
                 >
-                  {on > 0 ? `${on}h` : "off"}
+                  {on > 0 ? formatDuration(on * 3600) : m.grid_legend_off()}
                 </span>
               </div>
               <p

@@ -34,6 +34,16 @@ pub struct BrowserPermission {
 }
 
 #[derive(Clone, Debug, Serialize)]
+pub struct ForegroundHealth {
+    pub pid: i32,
+    pub name: String,
+    pub bundle_id: String,
+    pub regular_app: bool,
+    pub protected: bool,
+    pub protection_reason: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize)]
 pub struct MacHealth {
     pub platform: String,
     pub accessibility_granted: bool,
@@ -42,6 +52,8 @@ pub struct MacHealth {
     pub website_blocking_available: bool,
     pub front_browser: Option<String>,
     pub front_url_available: bool,
+    pub front_app: Option<ForegroundHealth>,
+    pub matched_rule: Option<String>,
     pub automation: Vec<BrowserPermission>,
     pub last_error: Option<String>,
     pub blocked_apps: u64,
@@ -58,6 +70,8 @@ impl Default for MacHealth {
             website_blocking_available: false,
             front_browser: None,
             front_url_available: false,
+            front_app: None,
+            matched_rule: None,
             automation: Vec::new(),
             last_error: None,
             blocked_apps: 0,
@@ -288,11 +302,33 @@ struct Foreground {
 }
 
 impl Foreground {
+    fn health(&self) -> ForegroundHealth {
+        ForegroundHealth {
+            pid: self.pid,
+            name: self.name.clone(),
+            bundle_id: self.bundle_id.clone(),
+            regular_app: self.regular_app,
+            protected: self.protected(),
+            protection_reason: self.protection_reason().map(str::to_string),
+        }
+    }
+
+    fn protection_reason(&self) -> Option<&'static str> {
+        if self.pid <= 4 {
+            Some("系统进程")
+        } else if self.pid as u32 == std::process::id() {
+            Some("专注花园自身")
+        } else if !self.regular_app {
+            Some("后台进程或系统辅助界面")
+        } else if is_protected_identity(&self.bundle_id, &self.executable, &self.path) {
+            Some("保留的系统恢复或工作应用")
+        } else {
+            None
+        }
+    }
+
     fn protected(&self) -> bool {
-        self.pid <= 4
-            || self.pid as u32 == std::process::id()
-            || !self.regular_app
-            || is_protected_identity(&self.bundle_id, &self.executable, &self.path)
+        self.protection_reason().is_some()
     }
 
     fn same_target(&self, other: &Self) -> bool {
@@ -679,6 +715,35 @@ enum AttemptError {
     Uncertain(String),
 }
 
+#[cfg(target_os = "macos")]
+#[derive(Default)]
+struct DispatchPermit(std::sync::atomic::AtomicU8);
+
+#[cfg(target_os = "macos")]
+impl DispatchPermit {
+    fn claim(&self) -> bool {
+        self.0
+            .compare_exchange(
+                0,
+                1,
+                std::sync::atomic::Ordering::SeqCst,
+                std::sync::atomic::Ordering::SeqCst,
+            )
+            .is_ok()
+    }
+
+    fn cancel_before_dispatch(&self) -> bool {
+        self.0
+            .compare_exchange(
+                0,
+                2,
+                std::sync::atomic::Ordering::SeqCst,
+                std::sync::atomic::Ordering::SeqCst,
+            )
+            .is_ok()
+    }
+}
+
 impl From<String> for AttemptError {
     fn from(message: String) -> Self {
         Self::Rejected(message)
@@ -701,6 +766,40 @@ impl AttemptError {
 
 fn retain_dispatch(result: &Result<bool, AttemptError>) -> bool {
     matches!(result, Err(AttemptError::Uncertain(_)))
+}
+
+#[cfg(target_os = "macos")]
+enum HideDispatch {
+    NotSent,
+    Sent { system_reported_success: bool },
+}
+
+#[cfg(target_os = "macos")]
+fn confirm_dispatched_hide(
+    dispatch: HideDispatch,
+    mut observe_hidden: impl FnMut() -> Result<bool, AttemptError>,
+) -> Result<bool, AttemptError> {
+    let HideDispatch::Sent {
+        system_reported_success,
+    } = dispatch
+    else {
+        return Ok(false);
+    };
+    // macOS can return NO after actually hiding the app. Once hide was called,
+    // only fresh observations establish success. This callback cannot resend.
+    for _ in 0..5 {
+        if observe_hidden()? {
+            return Ok(true);
+        }
+    }
+    Err(AttemptError::Uncertain(
+        if system_reported_success {
+            "应用隐藏结果未确认，未计入拦截次数。"
+        } else {
+            "系统未确认应用隐藏，结果未知；未重复执行或计入拦截次数。"
+        }
+        .into(),
+    ))
 }
 
 /// Root starts this once, after constructing its independent garden ledger.
@@ -747,17 +846,21 @@ pub fn start(app: tauri::AppHandle, state: Arc<crate::AppState>, garden: crate::
                 update_health(|health| {
                     health.front_browser = None;
                     health.front_url_available = false;
+                    health.front_app = None;
+                    health.matched_rule = None;
                     health.last_error = None;
                 });
                 std::thread::sleep(Duration::from_secs(5));
                 continue;
             }
-            let front = match native::foreground(policy.needs_url, policy.needs_title) {
+            let front = match native::foreground(&app, policy.needs_url, policy.needs_title) {
                 Ok(front) => front,
                 Err(error) => {
                     usage = UsageClock::default();
                     update_health(|health| {
                         health.monitoring = false;
+                        health.front_app = None;
+                        health.matched_rule = None;
                         health.last_error = Some(error);
                     });
                     std::thread::sleep(Duration::from_secs(1));
@@ -797,8 +900,11 @@ pub fn start(app: tauri::AppHandle, state: Arc<crate::AppState>, garden: crate::
                     continue;
                 }
             };
+            let block_decision = decision(&policy, &front);
             update_health(|health| {
                 health.accessibility_granted = mado::is_accessibility_trusted();
+                health.front_app = Some(front.health());
+                health.matched_rule = block_decision.as_ref().map(|event| event.list_name.clone());
                 health.front_browser = is_browser(&front.bundle_id).then(|| front.name.clone());
                 health.front_url_available = front.url.as_deref().and_then(web_url).is_some();
                 health.last_error = if policy.needs_url
@@ -818,14 +924,14 @@ pub fn start(app: tauri::AppHandle, state: Arc<crate::AppState>, garden: crate::
                     })
                 };
             });
-            if let Some(mut event) = decision(&policy, &front)
+            if let Some(mut event) = block_decision
                 && dispatched.as_ref() != Some(&key)
             {
                 dispatched = Some(key.clone());
                 let result = if event.kind == "app" {
-                    native::hide_app(&front)
+                    native::hide_app(&app, &front)
                 } else {
-                    native::redirect_browser(&front, &blocked_url(&page, &front, &event))
+                    native::redirect_browser(&app, &front, &blocked_url(&page, &front, &event))
                 };
                 if !retain_dispatch(&result) {
                     dispatched = None;
@@ -921,7 +1027,40 @@ mod native {
     use std::ffi::c_void;
     use std::process::{Command, Stdio};
 
-    pub fn foreground(needs_url: bool, needs_title: bool) -> Result<Foreground, String> {
+    unsafe extern "C" {
+        fn pthread_main_np() -> std::ffi::c_int;
+    }
+
+    /// AppKit's changing application properties are refreshed by the main run
+    /// loop. All observations, including pre-dispatch checks, use that same
+    /// thread. This schedules only reads: a timeout can never leave a queued
+    /// hide or tab change that fires later against an unobserved target.
+    fn query_on_main<T: Send + 'static>(
+        app: &tauri::AppHandle,
+        query: impl FnOnce() -> Result<T, String> + Send + 'static,
+    ) -> Result<T, String> {
+        if unsafe { pthread_main_np() } != 0 {
+            return query();
+        }
+        let (sender, receiver) = std::sync::mpsc::sync_channel(1);
+        app.run_on_main_thread(move || {
+            let _ = sender.send(query());
+        })
+        .map_err(|_| "无法在应用主线程读取前台状态。".to_string())?;
+        receiver
+            .recv_timeout(Duration::from_secs(2))
+            .map_err(|_| "前台状态读取超时，本次未执行限制。".to_string())?
+    }
+
+    pub fn foreground(
+        app: &tauri::AppHandle,
+        needs_url: bool,
+        needs_title: bool,
+    ) -> Result<Foreground, String> {
+        query_on_main(app, move || foreground_on_main(needs_url, needs_title))
+    }
+
+    fn foreground_on_main(needs_url: bool, needs_title: bool) -> Result<Foreground, String> {
         let app = mado::get_active_app().map_err(|_| "暂时无法读取前台应用。".to_string())?;
         let path = app.process_path.unwrap_or_default();
         let mut front = Foreground {
@@ -962,36 +1101,84 @@ mod native {
         Ok(front)
     }
 
-    pub fn hide_app(expected: &Foreground) -> Result<bool, AttemptError> {
-        let fresh = foreground(false, false)?;
+    pub fn hide_app(
+        handle: &tauri::AppHandle,
+        expected: &Foreground,
+    ) -> Result<bool, AttemptError> {
+        if unsafe { pthread_main_np() } != 0 {
+            return Err("应用限制需要后台调度，本次未执行。".into());
+        }
+        // The worker holds no engine/garden lock while waiting for AppKit.
+        // Cancellation happens before the queued callback claims this permit;
+        // an unknown post-dispatch outcome is never treated as retryable.
+        let expected = expected.clone();
+        let permit = Arc::new(DispatchPermit::default());
+        let ticket = permit.clone();
+        let target = expected.clone();
+        let (sender, receiver) = std::sync::mpsc::sync_channel(1);
+        handle
+            .run_on_main_thread(move || {
+                if ticket.claim() {
+                    let _ = sender.send(hide_once_on_main(&target));
+                }
+            })
+            .map_err(|_| "无法在应用主线程执行隐藏。".to_string())?;
+        let dispatch = match receiver.recv_timeout(Duration::from_secs(2)) {
+            Ok(result) => result?,
+            Err(_) if permit.cancel_before_dispatch() => {
+                return Err("应用主线程繁忙，本次尚未执行隐藏。".into());
+            }
+            Err(_) => {
+                return Err(AttemptError::Uncertain(
+                    "应用隐藏响应超时，结果未知。".into(),
+                ));
+            }
+        };
+        // A later main-loop turn refreshes isHidden. Never sleep in an AppKit
+        // callback: doing so would prevent the very update we need to verify.
+        confirm_dispatched_hide(dispatch, || {
+            std::thread::sleep(Duration::from_millis(40));
+            let target = expected.clone();
+            query_on_main(handle, move || {
+                Ok(
+                    NSRunningApplication::runningApplicationWithProcessIdentifier(target.pid)
+                        .is_some_and(|running| {
+                            running
+                                .bundleIdentifier()
+                                .is_some_and(|id| id.to_string() == target.bundle_id)
+                                && running.isHidden()
+                        }),
+                )
+            })
+            .map_err(AttemptError::Uncertain)
+        })
+    }
+
+    fn hide_once_on_main(expected: &Foreground) -> Result<HideDispatch, AttemptError> {
+        let fresh = foreground_on_main(false, false)?;
         if !fresh.same_target(expected) || fresh.protected() {
-            return Ok(false);
+            return Ok(HideDispatch::NotSent);
         }
         let Some(app) = NSRunningApplication::runningApplicationWithProcessIdentifier(expected.pid)
         else {
-            return Ok(false);
+            return Ok(HideDispatch::NotSent);
         };
         if !app.isActive() || app.isHidden() {
-            return Ok(false);
+            return Ok(HideDispatch::NotSent);
         }
-        if !app.hide() {
-            return Err("应用尚未隐藏，未计入拦截次数。".into());
-        }
-        for _ in 0..5 {
-            if app.isHidden() {
-                return Ok(true);
-            }
-            std::thread::sleep(Duration::from_millis(40));
-        }
-        Err(AttemptError::Uncertain(
-            "应用隐藏结果未确认，未计入拦截次数。".into(),
-        ))
+        Ok(HideDispatch::Sent {
+            system_reported_success: app.hide(),
+        })
     }
 
     pub fn redirect_browser(
+        handle: &tauri::AppHandle,
         expected: &Foreground,
         destination: &str,
     ) -> Result<bool, AttemptError> {
+        if unsafe { pthread_main_np() } != 0 {
+            return Err("网站限制需要后台调度，本次未执行。".into());
+        }
         let browser = resolve_browser(&expected.bundle_id).ok_or_else(|| {
             "此浏览器暂不支持标签页限制；请使用 Safari、Chrome 或 Edge。".to_string()
         })?;
@@ -1002,7 +1189,7 @@ mod native {
             )
             .into());
         }
-        let fresh = foreground(true, false)?;
+        let fresh = foreground(handle, true, false)?;
         if !fresh.same_target(expected) || fresh.url != expected.url {
             return Ok(false);
         }
@@ -1215,6 +1402,121 @@ mod tests {
             ..Foreground::default()
         }
     }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn hide_false_return_still_confirms_observed_hidden_without_resending() {
+        let mut reads = 0;
+        let result = confirm_dispatched_hide(
+            HideDispatch::Sent {
+                system_reported_success: false,
+            },
+            || {
+                reads += 1;
+                Ok(reads == 3)
+            },
+        );
+        assert!(matches!(result, Ok(true)));
+        assert_eq!(reads, 3);
+        assert!(!retain_dispatch(&result));
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn unconfirmed_hide_remains_single_use_regardless_of_system_return() {
+        for system_reported_success in [false, true] {
+            let mut reads = 0;
+            let result = confirm_dispatched_hide(
+                HideDispatch::Sent {
+                    system_reported_success,
+                },
+                || {
+                    reads += 1;
+                    Ok(false)
+                },
+            );
+            assert_eq!(reads, 5);
+            assert!(retain_dispatch(&result));
+        }
+        let untouched = confirm_dispatched_hide(HideDispatch::NotSent, || {
+            panic!("a pre-dispatch rejection must not enter confirmation")
+        });
+        assert!(matches!(untouched, Ok(false)));
+        assert!(!retain_dispatch(&untouched));
+        let read_error = confirm_dispatched_hide(
+            HideDispatch::Sent {
+                system_reported_success: false,
+            },
+            || Err(AttemptError::Uncertain("readback timed out".into())),
+        );
+        assert!(retain_dispatch(&read_error));
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn queued_hide_can_be_cancelled_only_before_dispatch() {
+        let cancelled = DispatchPermit::default();
+        assert!(cancelled.cancel_before_dispatch());
+        assert!(!cancelled.claim());
+        let sent = DispatchPermit::default();
+        assert!(sent.claim());
+        assert!(!sent.cancel_before_dispatch());
+        assert!(!sent.claim());
+        // Race the timeout against the main-thread callback. Exactly one may
+        // win; a cancelled callback cannot hide a later foreground target.
+        for _ in 0..32 {
+            let permit = Arc::new(DispatchPermit::default());
+            let barrier = Arc::new(std::sync::Barrier::new(2));
+            let worker_permit = permit.clone();
+            let worker_barrier = barrier.clone();
+            let worker = std::thread::spawn(move || {
+                worker_barrier.wait();
+                worker_permit.claim()
+            });
+            barrier.wait();
+            let was_cancelled = permit.cancel_before_dispatch();
+            let was_sent = worker.join().expect("dispatch worker");
+            assert_ne!(was_cancelled, was_sent);
+            assert!(!permit.claim());
+        }
+    }
+
+    #[test]
+    fn calculator_work_overlay_matches_and_health_explains_protection() {
+        let mut calculator = Foreground {
+            name: "计算器".into(),
+            bundle_id: "com.apple.calculator".into(),
+            executable: "Calculator".into(),
+            path: "/System/Applications/Calculator.app/Contents/MacOS/Calculator".into(),
+            ..front()
+        };
+        let mut list = BlockList::new("计算器测试");
+        list.enabled = false;
+        list.applications.push(AppRule {
+            id: uuid::Uuid::new_v4(),
+            match_type: AppMatchType::BundleId("com.apple.calculator".into()),
+            enabled: true,
+        });
+        let db = focuser_core::Database::open_in_memory().expect("fixture db");
+        db.create_block_list(&list).expect("fixture list");
+        let state = crate::AppState::new_headless(focuser_core::BlockEngine::new(db).unwrap());
+        let inactive = load_policy(&state, None).unwrap();
+        assert!(decision(&inactive, &calculator).is_none());
+        let overlay = load_policy(&state, Some(&list.id.to_string())).unwrap();
+        assert_eq!(decision(&overlay, &calculator).unwrap().kind, "app");
+        assert!(!calculator.health().protected);
+        assert!(calculator.health().protection_reason.is_none());
+        calculator.regular_app = false;
+        assert!(decision(&overlay, &calculator).is_none());
+        assert!(calculator.health().protected);
+        assert_eq!(
+            calculator.health().protection_reason.as_deref(),
+            Some("后台进程或系统辅助界面")
+        );
+        let engine = state.engine.lock().unwrap();
+        assert!(!engine.db().get_block_list(list.id).unwrap().enabled);
+    }
+
     fn with_web(kind: WebsiteMatchType) -> BlockList {
         let mut list = BlockList::new("测试限制");
         list.websites.push(WebsiteRule {

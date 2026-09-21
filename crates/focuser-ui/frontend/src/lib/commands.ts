@@ -193,11 +193,16 @@ export function useStats(from: string, to: string) {
   });
 }
 
+export async function getBlockedEvents(from: string, to: string) {
+  return expect(await run({ cmd: "get_blocked_events", args: { from, to } }), "blocked_events")
+    .data;
+}
+
 export function useBlockedEvents(from: string, to: string) {
   return useQuery({
     queryKey: queryKeys.events(from, to),
-    queryFn: async () =>
-      expect(await run({ cmd: "get_blocked_events", args: { from, to } }), "blocked_events").data,
+    queryFn: () => getBlockedEvents(from, to),
+    refetchInterval: 5000,
   });
 }
 

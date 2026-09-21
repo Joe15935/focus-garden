@@ -5,7 +5,8 @@
 //! source archive a reviewer can build, and reaching across to `../crates/`
 //! made that impossible.
 //!
-//! Two copies drift unless something says so. This is that something.
+//! Their rule data must stay identical. Focus Garden translates only the app's
+//! display names and descriptions; those labels intentionally differ.
 
 use std::path::PathBuf;
 
@@ -26,13 +27,46 @@ fn starter_lists_match() {
 
     // Parsed rather than compared byte for byte, so a line ending or a trailing
     // newline is not a failing test.
-    let app_value: serde_json::Value =
+    let mut app_value: serde_json::Value =
         serde_json::from_str(&app_json).expect("app copy is not JSON");
-    let extension_value: serde_json::Value =
+    let mut extension_value: serde_json::Value =
         serde_json::from_str(&extension_json).expect("extension copy is not JSON");
+
+    // Only display labels may differ. Remove them from both copies after
+    // checking their shape and the app's Chinese translation. The full-value
+    // comparison below still checks category IDs, version, every domain and
+    // wildcard (including array order), and any future non-display fields.
+    for (value, chinese) in [(&mut app_value, true), (&mut extension_value, false)] {
+        let categories = value["categories"]
+            .as_object_mut()
+            .expect("starter list categories must be an object");
+        assert!(!categories.is_empty(), "starter list categories are empty");
+        for (id, category) in categories {
+            let fields = category
+                .as_object_mut()
+                .expect("starter list category must be an object");
+            for field in ["name", "description"] {
+                let label = fields
+                    .remove(field)
+                    .expect("starter list display label is missing");
+                let label = label
+                    .as_str()
+                    .expect("starter list display label must be a string");
+                assert!(!label.trim().is_empty(), "{id}.{field} must not be empty");
+                if chinese {
+                    assert!(
+                        label
+                            .chars()
+                            .any(|c| ('\u{3400}'..='\u{9fff}').contains(&c)),
+                        "{id}.{field} must contain a Chinese translation"
+                    );
+                }
+            }
+        }
+    }
 
     assert_eq!(
         app_value, extension_value,
-        "premade-lists.json has drifted. Copy the app's version to extension/public/."
+        "starter list rule data has drifted; only name and description may be translated"
     );
 }

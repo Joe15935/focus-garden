@@ -1,0 +1,325 @@
+{
+  "block_lists": {
+    "app": "Focuser",
+    "block_lists": [
+      {
+        "applications": [
+          {
+            "enabled": true,
+            "id": "261767e8-9a03-474e-acfd-7d60265d1ac1",
+            "match_type": {
+              "BundleId": "com.apple.calculator"
+            }
+          }
+        ],
+        "breaks": null,
+        "created_at": "2026-09-21T05:14:24.626182Z",
+        "enabled": true,
+        "exceptions": [],
+        "id": "62f276eb-2692-488c-b061-0dc58d566174",
+        "lock": null,
+        "name": "我的专注",
+        "protection": null,
+        "schedule": {
+          "enabled": true,
+          "id": "1446a500-235a-417b-87be-2b3996e85cc0",
+          "name": "我的专注 schedule",
+          "time_slots": [
+            {
+              "day": "Mon",
+              "end": "02:00:00",
+              "start": "01:00:00"
+            }
+          ]
+        },
+        "updated_at": "2026-09-21T05:35:48.197437Z",
+        "websites": [
+          {
+            "enabled": true,
+            "id": "3689a7e2-6313-4767-9481-62048bf2b6c5",
+            "match_type": {
+              "Domain": "example.com"
+            }
+          }
+        ]
+      }
+    ],
+    "exported_at": "2026-09-21T05:51:29.572341Z",
+    "version": 1
+  },
+  "format": "focus-garden-backup",
+  "garden": {
+    "achievements": [
+      {
+        "description": "完整完成一次至少 1 分钟的专注",
+        "id": "first",
+        "title": "第一步",
+        "unlocked": true
+      },
+      {
+        "description": "完整完成一次至少 25 分钟的专注",
+        "id": "pomodoro",
+        "title": "初见番茄",
+        "unlocked": false
+      },
+      {
+        "description": "完整完成一次至少 50 分钟的专注",
+        "id": "fifty",
+        "title": "渐入佳境",
+        "unlocked": false
+      },
+      {
+        "description": "完整完成一次至少 90 分钟的专注",
+        "id": "ninety",
+        "title": "枝繁叶茂",
+        "unlocked": false
+      },
+      {
+        "description": "累计有效专注 1 小时",
+        "id": "hour",
+        "title": "一小时的积累",
+        "unlocked": false
+      },
+      {
+        "description": "累计有效专注 10 小时",
+        "id": "ten_hours",
+        "title": "扎下根来",
+        "unlocked": false
+      },
+      {
+        "description": "累计有效专注 50 小时",
+        "id": "fifty_hours",
+        "title": "一片绿荫",
+        "unlocked": false
+      },
+      {
+        "description": "累计有效专注 100 小时",
+        "id": "hundred_hours",
+        "title": "根深叶茂",
+        "unlocked": false
+      },
+      {
+        "description": "完整完成 5 次至少 1 分钟的专注",
+        "id": "five_sessions",
+        "title": "初成习惯",
+        "unlocked": false
+      },
+      {
+        "description": "完整完成 10 次至少 1 分钟的专注",
+        "id": "ten_sessions",
+        "title": "十次耕耘",
+        "unlocked": false
+      },
+      {
+        "description": "完整完成 25 次至少 1 分钟的专注",
+        "id": "twenty_five_sessions",
+        "title": "稳步生长",
+        "unlocked": false
+      },
+      {
+        "description": "完整完成 100 次至少 1 分钟的专注",
+        "id": "hundred_sessions",
+        "title": "百次用心",
+        "unlocked": false
+      },
+      {
+        "description": "达到过连续 3 天的专注门槛",
+        "id": "three_days",
+        "title": "连续萌芽",
+        "unlocked": false
+      },
+      {
+        "description": "达到过连续 7 天的专注门槛",
+        "id": "seven_days",
+        "title": "七日不辍",
+        "unlocked": false
+      },
+      {
+        "description": "达到过连续 30 天的专注门槛",
+        "id": "thirty_days",
+        "title": "三十日",
+        "unlocked": false
+      },
+      {
+        "description": "上午 8 点前完整完成至少 1 分钟专注",
+        "id": "early",
+        "title": "清晨学者",
+        "unlocked": true
+      },
+      {
+        "description": "18–23 点完整完成至少 1 分钟专注",
+        "id": "evening",
+        "title": "晚间耕耘",
+        "unlocked": false
+      },
+      {
+        "description": "完整完成一次专注或深度专注，至少 1 分钟",
+        "id": "focus",
+        "title": "坚守",
+        "unlocked": true
+      },
+      {
+        "description": "完整完成一次至少 1 分钟的深度专注",
+        "id": "deep",
+        "title": "深度扎根",
+        "unlocked": false
+      },
+      {
+        "description": "专注期间累计实际拦截应用 10 次",
+        "id": "app_guard",
+        "title": "守住边界",
+        "unlocked": false
+      },
+      {
+        "description": "专注期间累计实际拦截网站 10 次",
+        "id": "web_guard",
+        "title": "留在当下",
+        "unlocked": false
+      },
+      {
+        "description": "任一天有效专注达到当前每日目标",
+        "id": "daily_goal",
+        "title": "今日丰收",
+        "unlocked": false
+      },
+      {
+        "description": "任一自然周有效专注达到当前每周目标",
+        "id": "weekly_goal",
+        "title": "一周耕耘",
+        "unlocked": false
+      },
+      {
+        "description": "完成至少 1 分钟专注并记录任务已完成",
+        "id": "task_done",
+        "title": "有所完成",
+        "unlocked": true
+      },
+      {
+        "description": "通过有效专注达到 Lv.2",
+        "id": "level_two",
+        "title": "新枝",
+        "unlocked": false
+      },
+      {
+        "description": "通过有效专注达到 Lv.5",
+        "id": "level_five",
+        "title": "自己的花园",
+        "unlocked": false
+      }
+    ],
+    "active": null,
+    "app_blocks": 0,
+    "completed_sessions": 1,
+    "config": {
+      "background": "meadow",
+      "daily_goal_minutes": 120,
+      "plant": "sprout",
+      "pot": "clay",
+      "streak_minutes": 1,
+      "theme": "dark",
+      "weekly_goal_minutes": 600
+    },
+    "current_streak": 1,
+    "days": [
+      {
+        "date": "2026-09-21",
+        "seconds": 496,
+        "sessions": 3,
+        "tasks": [
+          "验收测试：番茄钟与计算器限制"
+        ]
+      }
+    ],
+    "interrupted_sessions": 3,
+    "level": 1,
+    "level_next_xp": 1000,
+    "level_xp": 7,
+    "longest_streak": 1,
+    "sessions": [
+      {
+        "break_remaining_secs": 0,
+        "break_secs": 0,
+        "category": "阅读",
+        "elapsed_secs": 56,
+        "ended_at": "2026-09-21T01:33:08.246580-04:00",
+        "exit_remaining_secs": 0,
+        "exit_requested_at": "2026-09-21T01:32:18.436287-04:00",
+        "id": "99710848-412a-4301-8106-ad86d4771d09",
+        "list_id": "62f276eb-2692-488c-b061-0dc58d566174",
+        "local_date": "2026-09-21",
+        "outcome": "pending",
+        "planned_secs": 120,
+        "reason": "验收测试：验证三十秒冷静期",
+        "started_at": "2026-09-21T01:32:11.965400-04:00",
+        "status": "interrupted",
+        "strict": "focus",
+        "task": "验收测试：三十秒退出",
+        "xp": 0
+      },
+      {
+        "break_remaining_secs": 0,
+        "break_secs": 0,
+        "category": "阅读",
+        "elapsed_secs": 380,
+        "ended_at": "2026-09-21T01:31:30.436083-04:00",
+        "exit_remaining_secs": 0,
+        "exit_requested_at": "2026-09-21T01:25:15.215759-04:00",
+        "id": "efb41cde-3149-4f99-bc63-de7dafd04e3c",
+        "list_id": "62f276eb-2692-488c-b061-0dc58d566174",
+        "local_date": "2026-09-21",
+        "outcome": "pending",
+        "planned_secs": 900,
+        "reason": "验收测试：五分钟冷静期结束，验证安全恢复",
+        "started_at": "2026-09-21T01:25:09.810142-04:00",
+        "status": "interrupted",
+        "strict": "deep",
+        "task": "验收测试：深度专注与安全退出",
+        "xp": 6
+      },
+      {
+        "break_remaining_secs": 0,
+        "break_secs": 60,
+        "category": "阅读",
+        "elapsed_secs": 60,
+        "ended_at": "2026-09-21T01:19:57.831014-04:00",
+        "exit_remaining_secs": 0,
+        "exit_requested_at": null,
+        "id": "48739307-ae99-499b-aa63-1490514e84b5",
+        "list_id": "62f276eb-2692-488c-b061-0dc58d566174",
+        "local_date": "2026-09-21",
+        "outcome": "completed",
+        "planned_secs": 60,
+        "reason": null,
+        "started_at": "2026-09-21T01:18:57.326591-04:00",
+        "status": "completed",
+        "strict": "focus",
+        "task": "验收测试：番茄钟与计算器限制",
+        "xp": 1
+      },
+      {
+        "break_remaining_secs": 0,
+        "break_secs": 60,
+        "category": "阅读",
+        "elapsed_secs": 0,
+        "ended_at": "2026-09-21T01:15:02.784483-04:00",
+        "exit_remaining_secs": 0,
+        "exit_requested_at": null,
+        "id": "e9f2892d-2630-4d90-9929-974ed83203eb",
+        "list_id": "62f276eb-2692-488c-b061-0dc58d566174",
+        "local_date": "2026-09-21",
+        "outcome": "pending",
+        "planned_secs": 60,
+        "reason": "应用退出或重启，本次专注已安全结束；离线时间不计入。",
+        "started_at": "2026-09-21T01:14:45.668063-04:00",
+        "status": "interrupted",
+        "strict": "focus",
+        "task": "验收测试：一分钟真实专注",
+        "xp": 0
+      }
+    ],
+    "total_seconds": 496,
+    "total_xp": 7,
+    "website_blocks": 0
+  },
+  "version": 1
+}

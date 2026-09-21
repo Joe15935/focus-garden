@@ -33,7 +33,7 @@ export function usePremadeLists() {
     queryKey: ["premade-lists"] as const,
     queryFn: async (): Promise<PremadeCategory[]> => {
       const response = await fetch("premade-lists.json");
-      if (!response.ok) throw new Error(`Could not load the starter lists (${response.status})`);
+      if (!response.ok) throw new Error(`无法读取入门列表 (${response.status})`);
 
       const parsed = file.parse(await response.json());
       return Object.entries(parsed.categories)

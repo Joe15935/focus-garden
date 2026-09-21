@@ -1,0 +1,121 @@
+Focus Garden — 修复前应用隐藏与漏计证据
+日期：2026-09-21
+采样时间格式：本机 America/New_York，UTC-04:00。
+
+来源与范围
+以下原始行摘录自本任务工具实际返回的文本；当时没有另存完整日志文件。
+观测程序只读调用系统 AppKit 的 NSWorkspace.frontmostApplication 与
+NSRunningApplication 的 bundleIdentifier、isActive、isHidden 等属性。
+连续采样约 8 秒，以 0.1 秒运行主 run loop，仅状态变化时打印。
+观测程序没有激活、隐藏或控制应用，没有操作 GUI、修改代码或编译。
+Chrome 的 Page.bringToFront 由主任务另行执行，不属于此只读采样程序。
+
+1. 修复前连续采样返回的全部三行
+
+2026-09-21T01:59:42.957104-04:00 {"front": {"pid": 8078, "id": "com.bilibili.bilibiliPC", "active": true, "hidden": false}, "chrome": {"pid": 25777, "id": "com.google.Chrome", "active": false, "hidden": true}}
+2026-09-21T01:59:48.079155-04:00 {"front": {"pid": 25777, "id": "com.google.Chrome", "active": true, "hidden": false}, "chrome": {"pid": 25777, "id": "com.google.Chrome", "active": true, "hidden": false}}
+2026-09-21T01:59:48.183288-04:00 {"front": {"pid": 39847, "id": "org.focusgarden.local", "active": true, "hidden": false}, "chrome": {"pid": 25777, "id": "com.google.Chrome", "active": false, "hidden": true}}
+
+可证事实：Chrome 从前台、未隐藏，约 104 毫秒后变为非前台、已隐藏；
+同时 Focus Garden 成为前台。此次排除了“Chrome 从未真正激活”的解释。
+
+2. 随后只读查询 blocked_events 的实际返回
+
+查询：SELECT * FROM blocked_events ORDER BY id DESC LIMIT 6;
+
+3|website:example.com|2026-09-21T05:58:39.817359+00:00
+2|website:example.net|2026-09-21T05:57:00.663764+00:00
+1|website:example.com|2026-09-21T05:53:49.328592+00:00
+
+这里“统计 0”指应用拦截事件为 0；数据库已有三条网站拦截事件，
+不能表述为全部拦截统计为 0。
+
+主任务在随后 02:02 的受控重测中直接观察到 Focus Garden 提示：
+“应用尚未隐藏，未计入拦截次数。”
+该提示由主任务报告，本采样程序没有读取或截图该提示。
+结合上面的状态变化与旧版代码中的 hide() == false 提前报错分支，
+确认旧版存在“实际已隐藏，但接口 false 返回值导致误报失败及漏计”。
+当时尚待修复版复测；不能将上述旧版采样作为修复版计数成功证据。
+
+3. 日程自然结束后的只读快照
+
+2026-09-21T02:01:11.316324-04:00 {"front": {"pid": 38157, "bundle": "com.microsoft.edgemac", "active": true, "hidden": false}, "chrome": {"pid": 25777, "bundle": "com.google.Chrome", "active": false, "hidden": false}}
+
+主任务报告原日程在 02:00 自然结束，02:00:41 再次执行 bringToFront，
+没有延长日程。此快照可证 02:01:11 Chrome 未隐藏；前台是 Edge。
+它不证明 Chrome 在这段时间持续保持前台，也不补造未采到的中间状态。
+
+4. 后续修复版记录的独立只读数据库核验
+
+修复后主任务完成重新构建及受控重测。以下是本任务随后实际读取的
+数据库行；此处只证明对应事件已经落盘，不从域名行推断浏览器身份。
+Safari、Chrome、Edge 的逐浏览器实测归属及权限状态见总验收记录。
+
+READ_AT 2026-09-21T04:55:58.111845-04:00
+[4, "app:com.google.Chrome", "2026-09-21T08:41:54.850833+00:00"]
+[5, "app:com.apple.calculator", "2026-09-21T08:42:09.025056+00:00"]
+[6, "website:example.com", "2026-09-21T08:47:22.283092+00:00"]
+[7, "website:example.com", "2026-09-21T08:48:00.284220+00:00"]
+[8, "website:example.com", "2026-09-21T08:48:13.730848+00:00"]
+
+查询以 SQLite mode=ro 打开应用自有 rules.sqlite3；未读取或修改 TCC 数据库。
+此次归档仅创建本证据文件，未修改源码、构建安装包或操作 UI。
+
+5. 修复版禁用规则后的后续只读检查（结果与预期不一致）
+
+主任务报告约 04:55 在列表禁用后通过 Finder 打开 Calculator，界面仍可见。
+本任务随后独立读取系统元数据与数据库，原始返回如下：
+
+SNAPSHOT 2026-09-21T04:57:13.339300-04:00 {"front": {"pid": 8078, "bundle": "com.bilibili.bilibiliPC", "active": true, "hidden": false}, "calculator": [{"pid": 37953, "bundle": "com.apple.calculator", "active": false, "hidden": true}]}
+EVENT_COUNT 8
+LIST {"id": "62f276eb-2692-488c-b061-0dc58d566174", "enabled_column": 0, "enabled_data": false}
+
+此时 Calculator 仍被系统标为 hidden=true，且不是前台，故不能把此采样
+写成“hidden=false”或解除闭环 PASS。列表数据库确实已禁用，事件总数
+仍为 8；本次没有新增拦截记录。此快照不能判断 Calculator 是否在前述
+Finder 操作中实际解除过隐藏，也不能判断此次 hidden=true 的原因。
+
+6. 最终规则停用后的连续只读检查
+
+经主任务授权，先连续采样 12 秒、每秒打印一次；第一窗口结束后又按
+其明确要求追加 8 秒。两轮都仅查询 AppKit 元数据，并运行主 run loop
+使变化属性能更新；没有激活、隐藏或操作任何应用。
+主任务另行创建 example.org 测试标签并执行 Page.bringToFront，
+然后停止使用 Sky 观察 Chrome。以下保留两轮工具返回的全部原始行。
+
+第一轮 12 秒：
+BEGIN 2026-09-21T05:02:38.389390-04:00 {"event_count": 8, "lists": [{"id": "62f276eb-2692-488c-b061-0dc58d566174", "enabled_column": 0, "enabled_data": false}], "enabled_allowances": 0}
+SAMPLE 0 2026-09-21T05:02:38.389712-04:00 {"front": {"pid": 8078, "bundle": "com.bilibili.bilibiliPC", "active": true, "hidden": false}, "chrome": {"pid": 25777, "bundle": "com.google.Chrome", "active": false, "hidden": false}}
+SAMPLE 1 2026-09-21T05:02:39.394362-04:00 {"front": {"pid": 8078, "bundle": "com.bilibili.bilibiliPC", "active": true, "hidden": false}, "chrome": {"pid": 25777, "bundle": "com.google.Chrome", "active": false, "hidden": false}}
+SAMPLE 2 2026-09-21T05:02:40.400307-04:00 {"front": {"pid": 8078, "bundle": "com.bilibili.bilibiliPC", "active": true, "hidden": false}, "chrome": {"pid": 25777, "bundle": "com.google.Chrome", "active": false, "hidden": false}}
+SAMPLE 3 2026-09-21T05:02:41.394387-04:00 {"front": {"pid": 8078, "bundle": "com.bilibili.bilibiliPC", "active": true, "hidden": false}, "chrome": {"pid": 25777, "bundle": "com.google.Chrome", "active": false, "hidden": false}}
+SAMPLE 4 2026-09-21T05:02:42.394812-04:00 {"front": {"pid": 8078, "bundle": "com.bilibili.bilibiliPC", "active": true, "hidden": false}, "chrome": {"pid": 25777, "bundle": "com.google.Chrome", "active": false, "hidden": false}}
+SAMPLE 5 2026-09-21T05:02:43.392475-04:00 {"front": {"pid": 8078, "bundle": "com.bilibili.bilibiliPC", "active": true, "hidden": false}, "chrome": {"pid": 25777, "bundle": "com.google.Chrome", "active": false, "hidden": false}}
+SAMPLE 6 2026-09-21T05:02:44.391741-04:00 {"front": {"pid": 8078, "bundle": "com.bilibili.bilibiliPC", "active": true, "hidden": false}, "chrome": {"pid": 25777, "bundle": "com.google.Chrome", "active": false, "hidden": false}}
+SAMPLE 7 2026-09-21T05:02:45.390147-04:00 {"front": {"pid": 8078, "bundle": "com.bilibili.bilibiliPC", "active": true, "hidden": false}, "chrome": {"pid": 25777, "bundle": "com.google.Chrome", "active": false, "hidden": false}}
+SAMPLE 8 2026-09-21T05:02:46.392715-04:00 {"front": {"pid": 8078, "bundle": "com.bilibili.bilibiliPC", "active": true, "hidden": false}, "chrome": {"pid": 25777, "bundle": "com.google.Chrome", "active": false, "hidden": false}}
+SAMPLE 9 2026-09-21T05:02:47.394035-04:00 {"front": {"pid": 8078, "bundle": "com.bilibili.bilibiliPC", "active": true, "hidden": false}, "chrome": {"pid": 25777, "bundle": "com.google.Chrome", "active": false, "hidden": false}}
+SAMPLE 10 2026-09-21T05:02:48.393013-04:00 {"front": {"pid": 8078, "bundle": "com.bilibili.bilibiliPC", "active": true, "hidden": false}, "chrome": {"pid": 25777, "bundle": "com.google.Chrome", "active": false, "hidden": false}}
+SAMPLE 11 2026-09-21T05:02:49.394216-04:00 {"front": {"pid": 8078, "bundle": "com.bilibili.bilibiliPC", "active": true, "hidden": false}, "chrome": {"pid": 25777, "bundle": "com.google.Chrome", "active": false, "hidden": false}}
+END 2026-09-21T05:02:50.394229-04:00 {"event_count": 8, "lists": [{"id": "62f276eb-2692-488c-b061-0dc58d566174", "enabled_column": 0, "enabled_data": false}], "enabled_allowances": 0}
+
+第二轮 8 秒：
+BEGIN 2026-09-21T05:03:22.109495-04:00 {"event_count": 8, "lists": [{"id": "62f276eb-2692-488c-b061-0dc58d566174", "enabled_column": 0, "enabled_data": false}], "enabled_allowances": 0}
+SAMPLE 0 2026-09-21T05:03:22.109955-04:00 {"front": {"pid": 1197, "bundle": "com.openai.codex", "active": true, "hidden": false}, "chrome": {"pid": 25777, "bundle": "com.google.Chrome", "active": false, "hidden": false}}
+SAMPLE 1 2026-09-21T05:03:23.113684-04:00 {"front": {"pid": 1197, "bundle": "com.openai.codex", "active": true, "hidden": false}, "chrome": {"pid": 25777, "bundle": "com.google.Chrome", "active": false, "hidden": false}}
+SAMPLE 2 2026-09-21T05:03:24.112707-04:00 {"front": {"pid": 1197, "bundle": "com.openai.codex", "active": true, "hidden": false}, "chrome": {"pid": 25777, "bundle": "com.google.Chrome", "active": false, "hidden": false}}
+SAMPLE 3 2026-09-21T05:03:25.112673-04:00 {"front": {"pid": 1197, "bundle": "com.openai.codex", "active": true, "hidden": false}, "chrome": {"pid": 25777, "bundle": "com.google.Chrome", "active": false, "hidden": false}}
+SAMPLE 4 2026-09-21T05:03:26.114462-04:00 {"front": {"pid": 1197, "bundle": "com.openai.codex", "active": true, "hidden": false}, "chrome": {"pid": 25777, "bundle": "com.google.Chrome", "active": false, "hidden": false}}
+SAMPLE 5 2026-09-21T05:03:27.114451-04:00 {"front": {"pid": 1197, "bundle": "com.openai.codex", "active": true, "hidden": false}, "chrome": {"pid": 25777, "bundle": "com.google.Chrome", "active": false, "hidden": false}}
+SAMPLE 6 2026-09-21T05:03:28.112669-04:00 {"front": {"pid": 1197, "bundle": "com.openai.codex", "active": true, "hidden": false}, "chrome": {"pid": 25777, "bundle": "com.google.Chrome", "active": false, "hidden": false}}
+SAMPLE 7 2026-09-21T05:03:29.112849-04:00 {"front": {"pid": 1197, "bundle": "com.openai.codex", "active": true, "hidden": false}, "chrome": {"pid": 25777, "bundle": "com.google.Chrome", "active": false, "hidden": false}}
+END 2026-09-21T05:03:30.112618-04:00 {"event_count": 8, "lists": [{"id": "62f276eb-2692-488c-b061-0dc58d566174", "enabled_column": 0, "enabled_data": false}], "enabled_allowances": 0}
+
+结论：两轮的全部 20 次采样中，Chrome 均为 hidden=false；数据库
+事件总数每轮开始和结束均为 8；列表 enabled_column=0、
+enabled_data=false，已启用额度数量为 0。
+
+边界：两轮中 Chrome 均为 active=false，系统前台分别为哔哩哔哩
+和 Codex。此处确认规则停用、Chrome 未再隐藏及无新增拦截事件，
+不声称 Chrome 持续处于系统前台，也不将其标为持续前台解除测试 PASS。
+第 5 节 Calculator 的未确认结果保留，不因这次 Chrome 结果而覆盖。

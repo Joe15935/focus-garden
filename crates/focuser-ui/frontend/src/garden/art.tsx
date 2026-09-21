@@ -6,11 +6,13 @@ export function Plant({
   variant = "sprout",
   pot = "clay",
   className = "",
+  preview = false,
 }: {
   minutes: number;
   variant?: string;
   pot?: string;
   className?: string;
+  preview?: boolean;
 }) {
   const stage = minutes >= 90 ? 3 : minutes >= 50 ? 2 : minutes >= 25 ? 1 : 0;
   const earth = pot === "ceramic" ? "#d7dcd0" : pot === "stone" ? "#7a8b7d" : "#b78363";
@@ -19,7 +21,11 @@ export function Plant({
       viewBox="0 0 160 190"
       className={`garden-plant ${className}`}
       role="img"
-      aria-label={`${stage === 0 ? "种子" : stage === 1 ? "发芽" : stage === 2 ? "生长" : "成熟"}，已专注 ${Math.floor(minutes)} 分钟`}
+      aria-label={
+        preview
+          ? "装扮预览"
+          : `${stage === 0 ? "种子" : stage === 1 ? "发芽" : stage === 2 ? "生长" : "成熟"}，已专注 ${Math.floor(minutes)} 分钟`
+      }
     >
       <ellipse cx="80" cy="179" rx="40" ry="7" fill="currentColor" opacity=".07" />
       <path d="M49 134h62l-9 37q-22 11-44 0z" fill={earth} />

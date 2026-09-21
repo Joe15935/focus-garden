@@ -2,8 +2,8 @@
   "version": 2,
   "categories": {
     "dating": {
-      "name": "Dating",
-      "description": "Dating websites and apps",
+      "name": "交友约会",
+      "description": "交友、约会类网站和服务",
       "domains": [
         "ashleymadison.com",
         "benaughty.com",
@@ -47,8 +47,8 @@
       "wildcards": []
     },
     "distractions": {
-      "name": "Distractions",
-      "description": "General time-wasting websites",
+      "name": "休闲娱乐",
+      "description": "容易让人分心的休闲娱乐网站",
       "domains": [
         "bsky.app",
         "chess.com",
@@ -74,8 +74,8 @@
       "wildcards": []
     },
     "email": {
-      "name": "Email",
-      "description": "Email providers and webmail",
+      "name": "电子邮件",
+      "description": "邮箱服务商和网页版邮箱",
       "domains": [
         "att.net",
         "bluewin.ch",
@@ -145,8 +145,8 @@
       "wildcards": []
     },
     "gambling": {
-      "name": "Gambling",
-      "description": "Gambling and betting websites",
+      "name": "博彩",
+      "description": "博彩和投注类网站",
       "domains": [
         "5dimes.eu",
         "5dimes.mobi",
@@ -363,8 +363,8 @@
       ]
     },
     "games": {
-      "name": "Games",
-      "description": "Gaming websites and platforms",
+      "name": "游戏",
+      "description": "游戏网站和游戏平台",
       "domains": [
         "7sudoku.com",
         "247solitaire.com",
@@ -505,8 +505,8 @@
       ]
     },
     "news": {
-      "name": "News",
-      "description": "News websites and media",
+      "name": "新闻资讯",
+      "description": "新闻网站和媒体平台",
       "domains": [
         "*.*/*p=*current*event*",
         "*.*/*p=*headlines*",
@@ -733,8 +733,8 @@
       "wildcards": []
     },
     "porn": {
-      "name": "Porn",
-      "description": "Adult and pornographic websites",
+      "name": "成人内容",
+      "description": "成人内容网站",
       "domains": [
         "3movs.com",
         "4tube.com",
@@ -1024,8 +1024,8 @@
       ]
     },
     "proxies": {
-      "name": "Proxies",
-      "description": "Proxy and VPN websites",
+      "name": "代理服务",
+      "description": "代理和虚拟专用网络服务网站",
       "domains": [
         "*.*/*p=*proxies*",
         "*.*/*p=*proxy*",
@@ -1077,8 +1077,8 @@
       ]
     },
     "search_engines": {
-      "name": "Search Engines",
-      "description": "Search engines and portals",
+      "name": "搜索引擎",
+      "description": "搜索引擎和门户网站",
       "domains": [
         "search.aol.*",
         "ask.com",
@@ -1107,8 +1107,8 @@
       "wildcards": []
     },
     "shopping": {
-      "name": "Shopping",
-      "description": "Online shopping and e-commerce",
+      "name": "购物",
+      "description": "网上购物和电商平台",
       "domains": [
         "*.*/buy*",
         "*.*/cart*",
@@ -1160,8 +1160,8 @@
       "wildcards": []
     },
     "social_media": {
-      "name": "Social Media",
-      "description": "Social media platforms",
+      "name": "社交媒体",
+      "description": "社交媒体和社区平台",
       "domains": [
         "4chan.org",
         "9gag.com",
@@ -1213,8 +1213,8 @@
       "wildcards": []
     },
     "videos": {
-      "name": "Videos",
-      "description": "Video sharing and streaming",
+      "name": "视频",
+      "description": "视频分享和流媒体网站",
       "domains": [
         "abc.go.com",
         "bilibili.com",
@@ -1252,8 +1252,8 @@
       "wildcards": []
     },
     "productivity": {
-      "name": "Productivity",
-      "description": "Productivity tools (block during focus time)",
+      "name": "效率工具",
+      "description": "工作和效率工具网站，仅在需要暂时远离它们时导入",
       "domains": [
         "2checkout.com",
         "android.com",

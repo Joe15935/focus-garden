@@ -1,0 +1,376 @@
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.32s
+   Compiling focuser-ui v0.7.3 (/Users/gls/Projects/focus-garden/crates/focuser-ui)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.57s
+     Running unittests src/lib.rs (target/debug/deps/focuser_app-1b84487235dfdd3f)
+
+running 57 tests
+test command::health_tests::either_mechanism_alone_is_enough ... ok
+test command::health_tests::losing_both_mechanisms_with_active_lists_is_a_failure ... ok
+test command::health_tests::nothing_is_wrong_when_nothing_is_meant_to_be_blocked ... ok
+test command::tests::unit_variant_serialises_without_args ... ok
+test error::tests::core_not_found_is_classified_as_not_found_not_internal ... ok
+test error::tests::genuinely_internal_core_errors_stay_internal ... ok
+test error::tests::core_protection_errors_map_to_protected ... ok
+test error::tests::validation_exits_two_and_protected_exits_five ... ok
+test error::tests::codes_are_distinct_per_kind ... ok
+test error::tests::serialises_to_code_and_message ... ok
+test command::tests::command_round_trips_through_json ... ok
+test execute::tests::allowance_rejects_limits_outside_the_supported_range ... ok
+test execute::tests::add_website_rule_persists_with_its_match_type ... ok
+test execute::tests::adding_the_same_site_twice_does_not_make_two_rules ... ok
+test execute::tests::an_unmeasurable_allowance_does_not_become_an_unlimited_pass ... ok
+test execute::tests::a_wildcard_and_a_domain_of_the_same_name_are_different_rules ... ok
+test execute::tests::app_version_is_the_crate_version ... ok
+test context::tests::drain_returns_pushed_events_then_empties ... ok
+test execute::tests::allowance_create_list_and_delete ... ok
+test execute::tests::app_rules_add_and_remove ... ok
+test execute::tests::app_icons_are_read_once_per_distinct_target ... ok
+test execute::tests::app_icons_answer_for_every_target_even_when_there_is_no_icon ... ok
+test context::tests::sync_hosts_delegates_to_the_injected_impl ... ok
+test execute::tests::browser_status_lists_every_known_browser_as_absent_when_headless ... ok
+test execute::tests::check_domain_reports_blocked_only_for_enabled_lists ... ok
+test execute::tests::blocking_health_is_calm_when_the_extension_is_doing_the_work ... ok
+test execute::tests::clear_all_skips_protected_lists_but_still_clears_the_rest ... ok
+test execute::tests::blocking_health_reports_a_machine_that_cannot_block_at_all ... ok
+test execute::tests::bulk_import_treats_every_form_of_a_domain_as_one_entry ... ok
+test execute::tests::bulk_import_skips_blanks_comments_and_duplicates ... ok
+test execute::tests::create_trims_whitespace_and_rejects_blank_names ... ok
+test execute::tests::clear_all_websites_counts_across_lists_and_leaves_apps_alone ... ok
+test execute::tests::delete_removes_the_list ... ok
+test execute::tests::create_then_list_returns_the_new_list ... ok
+test execute::tests::delete_all_data_empties_lists_and_statistics ... ok
+test execute::tests::deleting_a_missing_list_is_an_error_not_a_silent_success ... ok
+test execute::tests::import_and_delete_all_are_refused_while_a_list_is_locked ... ok
+test execute::tests::import_rejects_junk_without_touching_existing_lists ... ok
+test execute::tests::a_domain_rule_covers_www_and_subdomains_whichever_form_was_typed ... ok
+test execute::tests::pomodoro_is_idle_until_started_and_reports_its_session ... ok
+test execute::tests::import_rejects_a_document_from_a_newer_format ... ok
+test execute::tests::pomodoro_start_rejects_an_invalid_config ... ok
+test execute::tests::exceptions_add_and_remove ... ok
+test execute::tests::pomodoro_pause_and_stop_report_whether_anything_happened ... ok
+test execute::tests::protection_cannot_be_re_armed_while_active ... ok
+test execute::tests::protection_status_reports_the_active_window ... ok
+test execute::tests::protection_blocks_modification_and_disabling_but_not_enabling ... ok
+test execute::tests::export_then_import_restores_the_same_lists ... ok
+test execute::tests::removing_a_missing_rule_reports_not_found ... ok
+test execute::tests::schedule_round_trips_and_always_active_clears_it ... ok
+test execute::tests::stats_retention_defaults_to_thirty_and_rejects_out_of_range ... ok
+test execute::tests::stats_reject_an_inverted_date_range ... ok
+test execute::tests::toggle_flips_enabled_and_persists ... ok
+test execute::tests::update_persists_a_renamed_list ... ok
+test execute::tests::updating_a_missing_allowance_reports_not_found ... ok
+test execute::tests::settings_round_trip_and_fall_back_to_the_supplied_default ... ok
+test execute::tests::an_allowance_releases_the_domain_whichever_form_either_side_used ... ok
+
+test result: ok. 57 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running unittests src/main.rs (target/debug/deps/focuser_cli-64ba3f57d5b77739)
+
+running 5 tests
+test output::tests::formats_durations_by_magnitude ... ok
+test output::tests::truncate_respects_char_boundaries ... ok
+test slot::tests::accepts_bare_hours_and_long_day_names ... ok
+test slot::tests::parses_a_full_spec ... ok
+test slot::tests::reports_the_offending_value_rather_than_failing_vaguely ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/cli.rs (target/debug/deps/cli-3f676d37123eccf0)
+
+running 29 tests
+test every_top_level_subcommand_is_reachable ... ok
+test browsers_lists_every_known_browser ... ok
+test exit_codes_distinguish_failure_kinds ... ok
+test a_missing_rule_is_reported_rather_than_silently_succeeding ... ok
+test bulk_import_reports_how_many_values_it_accepted ... ok
+test an_unparseable_slot_is_rejected_before_touching_the_database ... ok
+test bulk_import_reads_a_file ... ok
+test creating_a_list_makes_it_appear_in_ls ... ok
+test import_of_a_junk_file_fails_as_validation_and_changes_nothing ... ok
+test json_output_is_machine_readable_and_human_output_is_not_required_to_be ... ok
+test full_website_rule_lifecycle ... ok
+test allowance_lifecycle_and_validation ... ok
+test clear_all_skips_protected_lists ... ok
+test runs_against_a_database_that_does_not_exist_yet ... ok
+test stats_reject_a_backwards_date_range ... ok
+test check_reports_whether_a_domain_is_blocked ... ok
+test protection_opt_outs_are_honoured ... ok
+test version_matches_the_binary ... ok
+test settings_distinguish_unset_from_empty ... ok
+test export_then_import_round_trips_through_a_file ... ok
+test protection_prevents_modification_and_is_reported_by_status ... ok
+test pomodoro_reports_idle_then_running ... ok
+test stats_retention_round_trips ... ok
+test schedule_slots_parse_and_round_trip ... ok
+test the_database_flag_isolates_runs_from_each_other ... ok
+test wipe_refuses_without_an_explicit_yes ... ok
+test toggling_a_list_persists_across_invocations ... ok
+test wipe_with_yes_removes_everything ... ok
+test wipe_and_import_are_refused_while_a_list_is_locked ... ok
+
+test result: ok. 29 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.12s
+
+     Running unittests src/lib.rs (target/debug/deps/focuser_common-4c0ec77b9494218a)
+
+running 85 tests
+test appicon::platform::tests::a_window_title_is_not_hunted_for_on_disk ... ok
+test appicon::tests::a_desktop_entry_yields_the_keys_that_matter ... ok
+test appicon::tests::a_localised_key_does_not_override_the_plain_one ... ok
+test appicon::tests::an_empty_exec_line_names_no_program ... ok
+test appicon::tests::a_quoted_program_path_survives_its_spaces ... ok
+test appicon::tests::an_entirely_transparent_icon_is_not_worth_showing ... ok
+test appicon::tests::an_exec_line_reduces_to_its_program ... ok
+test appicon::tests::an_icon_must_carry_exactly_as_many_pixels_as_it_claims ... ok
+test appicon::tests::a_data_uri_is_a_png_the_browser_will_accept ... ok
+test appicon::tests::a_png_without_an_alpha_channel_decodes_as_opaque ... ok
+test appicon::tests::downscaling_leaves_an_already_small_icon_alone ... ok
+test appicon::tests::garbage_is_not_a_png ... ok
+test appicon::tests::keys_are_case_sensitive_as_the_spec_requires ... ok
+test appicon::tests::nearly_transparent_edges_do_not_count_as_content ... ok
+test appicon::tests::nodisplay_is_only_true_when_it_says_true ... ok
+test appicon::tests::a_png_round_trips_through_encode_and_decode ... ok
+test appicon::tests::only_the_desktop_entry_group_is_read ... ok
+test appicon::tests::the_spec_says_whitespace_around_the_equals_sign_is_ignored ... ok
+test appicon::tests::transparent_pixels_do_not_darken_their_neighbours ... ok
+test appicon::tests::trimming_leaves_a_full_bleed_icon_untouched ... ok
+test block::tests::test_app_blocking ... ok
+test block::tests::test_disabled_list_blocks_nothing ... ok
+test appicon::tests::trimming_crops_away_the_transparent_canvas ... ok
+test block::tests::test_domain_blocking ... ok
+test block::tests::test_schedule_no_slots_still_blocks ... ok
+test block::tests::test_exception_overrides_block ... ok
+test block::tests::test_wildcard_rule ... ok
+test browser::tests::test_all_known_browsers_detectable ... ok
+test block::tests::test_scheduled_inactive_does_not_block_domain ... ok
+test block::tests::test_scheduled_inactive_does_not_block_app ... ok
+test browser::tests::test_identify_browser_case_insensitive ... ok
+test browser::tests::test_identify_browser_chrome ... ok
+test browser::tests::test_identify_browser_unknown ... ok
+test appicon::tests::downscaling_caps_the_longest_edge_and_keeps_the_aspect_ratio ... ok
+test host::tests::a_bare_star_matches_every_host ... ok
+test host::tests::a_pattern_can_still_aim_at_the_www_label ... ok
+test host::tests::a_subdomain_rule_does_not_cover_the_parent ... ok
+test appicon::tests::downscaling_averages_colour_rather_than_dropping_pixels ... ok
+test host::tests::a_rule_covers_its_subdomains ... ok
+test host::tests::an_empty_rule_matches_nothing ... ok
+test host::tests::a_leading_star_dot_covers_the_apex_as_well ... ok
+test host::tests::any_host_matches_scans_the_whole_set ... ok
+test host::tests::hosts_entries_cover_both_forms_whichever_was_typed ... ok
+test host::tests::canonical_strips_everything_that_is_not_the_host ... ok
+test host::tests::hosts_entries_ignores_a_blank_rule ... ok
+test host::tests::suffixes_have_to_be_on_a_label_boundary ... ok
+test host::tests::wildcard_ignores_case_and_blank_patterns ... ok
+test host::tests::canonical_leaves_a_deeper_subdomain_alone ... ok
+test pomodoro::tests::classic_is_the_first_preset_offered ... ok
+test host::tests::www_is_irrelevant_in_every_direction ... ok
+test pomodoro::tests::every_preset_passes_its_own_validation ... ok
+test pomodoro::tests::every_preset_is_reachable_by_its_own_key ... ok
+test pomodoro::tests::lookup_ignores_case_and_rejects_unknown_keys ... ok
+test pomodoro::tests::preset_keys_are_unique ... ok
+test process::imp::tests::a_bare_binary_keeps_its_file_name ... ok
+test process::imp::tests::a_bare_command_name_is_left_alone ... ok
+test process::imp::tests::a_ps_row_yields_the_executable_basename ... ok
+test process::imp::tests::rows_without_a_pid_or_a_command_are_skipped ... ok
+test process::tests::an_ordinary_pid_is_killable ... ok
+test appicon::tests::nothing_resolves_for_a_target_that_is_not_a_program ... ok
+test process::tests::kernel_and_init_pids_are_never_killable ... ok
+test process::tests::our_own_process_is_never_killable ... ok
+test schedule::tests::test_time_slot_midnight_wrap ... ok
+test session::tests::every_platform_but_wayland_can_measure ... ok
+test schedule::tests::test_time_slot_normal_range ... ok
+test session::tests::wayland_is_a_linux_only_concern ... ok
+test uninstall::tests::an_ordinary_program_is_never_an_attempt ... ok
+test uninstall::tests::a_shell_needs_both_focuser_and_a_removal_verb ... ok
+test uninstall::tests::an_uninstaller_aimed_at_focuser_is_an_attempt ... ok
+test uninstall::tests::an_unreadable_command_line_is_never_an_attempt ... ok
+test uninstall::tests::detect_never_reads_the_command_line_of_an_ordinary_process ... ok
+test uninstall::tests::detect_returns_only_the_offending_pids ... ok
+test uninstall::tests::matching_is_case_insensitive_on_both_sides ... ok
+test uninstall::tests::our_own_process_is_never_flagged ... ok
+test uninstall::tests::the_same_uninstaller_aimed_elsewhere_is_left_alone ... ok
+test appicon::platform::tests::a_bundle_is_found_by_name_with_or_without_the_extension ... ok
+test appicon::platform::tests::a_path_inside_a_bundle_walks_back_up_to_it ... ok
+test process::imp::tests::a_bundle_without_a_plist_falls_back_to_its_own_name ... ok
+test appicon::platform::tests::a_bundle_with_no_icon_at_all_yields_nothing ... ok
+test appicon::platform::tests::a_bundle_with_no_usable_plist_key_falls_back_to_the_icns_on_disk ... ok
+test process::imp::tests::a_bundle_resolves_to_its_declared_executable ... ok
+test appicon::platform::tests::a_plist_pointing_at_a_missing_file_still_falls_back ... ok
+test appicon::platform::tests::the_plist_names_the_icon_and_the_extension_is_optional ... ok
+test appicon::platform::tests::a_real_installed_application_yields_a_real_icon ... ok
+test process::tests::listing_finds_the_test_binary_itself ... ok
+
+test result: ok. 85 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running unittests src/lib.rs (target/debug/deps/focuser_core-1aee7117d4a2403f)
+
+running 41 tests
+test allowance::tests::subdomain_matches_root ... ok
+test engine::tests::test_extension_rules_domain_only ... ok
+test engine::tests::test_extension_rules_entire_internet_with_exceptions ... ok
+test engine::tests::test_check_app ... ok
+test db::tests::test_statistics ... ok
+test allowance::tests::strict_mode_ignores_inactive ... ok
+test allowance::tests::tick_increments_usage ... ok
+test db::tests::test_crud_block_list ... ok
+test engine::tests::test_extension_rules_with_keywords ... ok
+test engine::tests::test_collect_blocked_domains ... ok
+test engine::tests::an_exception_releases_both_www_forms ... ok
+test engine::tests::test_check_domain ... ok
+test allowance::tests::exhaustion_blocks_domain ... ok
+test db::tests::test_settings ... ok
+test garden::tests::crosses_midnight_into_two_actual_dates ... ok
+test garden::tests::fractional_heartbeats_are_accumulated_but_not_rounded_up ... ok
+test garden::tests::invalid_and_concurrent_starts_are_rejected ... ok
+test garden::tests::focus_cooldown_is_backend_enforced_and_request_is_idempotent ... ok
+test garden::tests::settings_reject_invalid_enums_goals_and_unearned_decorations ... ok
+test garden::tests::short_sessions_have_no_xp_or_first_achievement ... ok
+test garden::tests::block_counters_require_work_and_make_real_achievements ... ok
+test pomodoro::tests::break_back_to_work_increments_cycle ... ok
+test pomodoro::tests::config_validation ... ok
+test pomodoro::tests::long_break_after_n_cycles ... ok
+test pomodoro::tests::no_advance_before_timer_elapses ... ok
+test pomodoro::tests::paused_session_does_not_advance ... ok
+test pomodoro::tests::remaining_secs_when_paused ... ok
+test pomodoro::tests::work_to_short_break_transition ... ok
+test garden::tests::break_does_not_earn_focus_and_can_end_immediately ... ok
+test garden::tests::sleep_offline_and_large_heartbeat_gaps_never_earn_credit ... ok
+test garden::tests::natural_break_end_releases_active_without_duplicate_rewards ... ok
+test garden::tests::outcome_exports_are_local_escaped_and_cannot_rewrite_rewards ... ok
+test engine::tests::hosts_and_extension_rules_list_both_www_forms_whichever_was_typed ... ok
+test garden::tests::wall_clock_rollback_waits_until_previous_highwater ... ok
+test engine::tests::test_has_extension_only_rules ... ok
+test garden::tests::restart_during_break_keeps_completion ... ok
+test garden::tests::configurable_streak_and_gap_are_calendar_based ... ok
+test garden::tests::restart_preserves_progress_config_and_safely_interrupts ... ok
+test garden::tests::deep_cooldown_ignores_wall_jump_and_requires_exact_phrase ... ok
+test garden::tests::exact_completion_bonus_and_duplicate_tick_are_idempotent ... ok
+test garden::tests::interruptions_keep_real_minutes_without_bonus ... ok
+
+test result: ok. 41 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running unittests src/main.rs (target/debug/deps/focuser_devserver-25fa2822cc52b50c)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/focuser_native-6930f8d8db36cc75)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/focuser_ui-8648fa07ef2a58bd)
+
+running 27 tests
+test mac_guard::tests::confirmed_or_rejected_action_can_recheck_but_uncertain_action_cannot_replay ... ok
+test mac_guard::native::tests::apple_event_descriptor_matches_sdk_two_byte_packing ... ok
+test garden_bridge::tests::all_legacy_mutation_escape_routes_are_not_read_only ... ok
+test mac_guard::tests::arbitrary_browser_identifiers_cannot_become_applescript_source ... ok
+test garden_bridge::tests::backend_validation_is_shown_in_chinese ... ok
+test mac_guard::tests::bundle_id_path_and_window_title_match_actual_identity ... ok
+test instance_tests::data_lock_excludes_second_writer_and_releases_after_drop ... ok
+test mac_guard::tests::inactive_and_disabled_rules_do_not_poll ... ok
+test mac_guard::tests::subsecond_usage_accumulates_without_rounding_up ... ok
+test mac_guard::tests::blocked_page_encodes_untrusted_text_as_data_only ... ok
+test mac_guard::tests::url_glob_stars_cover_nested_paths_but_literals_stay_exact ... ok
+test mac_guard::tests::usage_does_not_bill_sleep_or_idle_intervals ... ok
+test mac_guard::tests::non_web_urls_never_trigger_website_rules ... ok
+test mac_guard::tests::per_list_exception_cannot_release_another_lists_rule ... ok
+test mac_guard::native::tests::permission_probe_does_not_launch_an_unknown_application ... ok
+test mac_guard::tests::wildcard_hosts_paths_keywords_and_exceptions_work ... ok
+test mac_guard::tests::domain_matches_only_real_hostname_boundaries ... ok
+test mac_guard::tests::whitelist_never_blocks_essential_apps_or_background_helpers ... ok
+test mac_guard::tests::allowances_release_only_their_matching_targets ... ok
+test garden_bridge::tests::frontend_blocked_event_payload_deserializes_as_real_command ... ok
+test mac_guard::tests::learning_video_exception_matches_exact_query_without_other_host_bypass ... ok
+test mac_guard::tests::path_rules_do_not_search_query_or_host_substrings ... ok
+test mac_guard::tests::queued_hide_can_be_cancelled_only_before_dispatch ... ok
+test mac_guard::tests::calculator_work_overlay_matches_and_health_explains_protection ... ok
+test mac_guard::tests::same_domain_navigation_bills_both_ledgers_but_cross_domain_only_bills_app ... ok
+test mac_guard::tests::work_overlay_ignores_schedule_without_mutating_saved_lists ... ok
+test mac_guard::tests::upstream_allowance_ledger_charges_app_and_domain_then_blocks ... ok
+
+test result: ok. 27 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/error_messages.rs (target/debug/deps/error_messages-c4bb91eae463fa7d)
+
+running 2 tests
+test the_variant_list_above_is_complete ... ok
+test every_error_code_has_a_message_or_is_deliberately_raw ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/starter_lists.rs (target/debug/deps/starter_lists-e8304b0c8dc00b42)
+
+running 1 test
+test starter_lists_match ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests focuser_app
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests focuser_common
+
+running 1 test
+test crates/focuser-common/src/host.rs - host::canonical_host (line 16) ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+all doctests ran in 0.86s; merged doctests compilation took 0.20s
+   Doc-tests focuser_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+> focuser-frontend@0.7.3 typecheck
+> tsc --noEmit
+
+
+> focuser-frontend@0.7.3 test
+> vitest run
+
+
+ RUN  v4.1.10 /Users/gls/Projects/focus-garden/crates/focuser-ui/frontend
+
+
+ Test Files  19 passed (19)
+      Tests  207 passed (207)
+   Start at  01:39:18
+   Duration  2.56s (transform 3.97s, setup 2.25s, import 5.70s, tests 2.32s, environment 13.07s)
+
+
+> focuser-frontend@0.7.3 build
+> tsc --noEmit && vite build
+
+vite v8.1.5 building client environment for production...
+✔ [paraglide-js] Compilation complete (message-modules)
+[2Ktransforming...✓ 2354 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                              0.41 kB │ gzip:   0.29 kB
+dist/assets/inter-vietnamese-wght-normal-CBcvBZtf.woff2     10.25 kB
+dist/assets/inter-greek-ext-wght-normal-DlzME5K_.woff2      11.23 kB
+dist/assets/inter-cyrillic-wght-normal-DqGufNeO.woff2       18.74 kB
+dist/assets/inter-greek-wght-normal-CkhJZR-_.woff2          18.99 kB
+dist/assets/inter-cyrillic-ext-wght-normal-BOeWTOD4.woff2   25.96 kB
+dist/assets/inter-latin-wght-normal-Dx4kXJAl.woff2          48.25 kB
+dist/assets/inter-latin-ext-wght-normal-DO1Apj_S.woff2      85.06 kB
+dist/assets/index-CycOsQt2.css                              79.31 kB │ gzip:  14.83 kB
+dist/assets/statistics-C52VMLUu.js                           7.08 kB │ gzip:   2.67 kB
+dist/assets/index-BhGahSmf.js                              740.28 kB │ gzip: 232.95 kB
+
+[33m[PLUGIN_TIMINGS] [0mYour build spent significant time in plugin `unplugin-paraglide-js`. See https://rolldown.rs/reference/InputOptions.checks#plugintimings for more details.
+
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 3.27s

@@ -89,6 +89,7 @@ export function Garden() {
                           />
                         ) : (
                           <Plant
+                            preview
                             minutes={90}
                             variant={kind === "plant" ? option.value : data.config.plant}
                             pot={kind === "pot" ? option.value : data.config.pot}

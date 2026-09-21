@@ -5,8 +5,8 @@ import { GardenError, GardenLoading } from "@/garden/common";
 import { useBlockedEvents } from "@/lib/commands";
 import { ExportActions } from "@/garden/export";
 import { SessionReflection } from "./dashboard";
+import { blockedEventRange, periodStart, type Period } from "@/garden/statistics";
 
-type Period = "today" | "week" | "month" | "year" | "all";
 const PERIODS: [Period, string][] = [
   ["today", "今天"],
   ["week", "本周"],
@@ -14,24 +14,12 @@ const PERIODS: [Period, string][] = [
   ["year", "今年"],
   ["all", "全部"],
 ];
-export function periodStart(period: Period, now = new Date()): string {
-  const date = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  if (period === "all") return "0000-01-01";
-  if (period === "week") date.setDate(date.getDate() - ((date.getDay() + 6) % 7));
-  if (period === "month") date.setDate(1);
-  if (period === "year") date.setMonth(0, 1);
-  return localDate(date);
-}
 export function Statistics() {
   const garden = useGarden();
   const [period, setPeriod] = useState<Period>("week");
   const start = periodStart(period);
-  const startDate = new Date(
-    `${start === "0000-01-01" ? "1970-01-01" : start}T00:00:00`,
-  ).toISOString();
-  const nextDay = new Date();
-  nextDay.setHours(24, 0, 0, 0);
-  const events = useBlockedEvents(startDate, nextDay.toISOString());
+  const range = blockedEventRange(period);
+  const events = useBlockedEvents(range.from, range.to);
   const appBlocks = events.data?.filter((event) => event.domain_or_app.startsWith("app:")).length;
   const websiteBlocks = events.data?.filter((event) =>
     event.domain_or_app.startsWith("website:"),

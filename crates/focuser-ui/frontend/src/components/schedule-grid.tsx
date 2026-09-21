@@ -3,6 +3,7 @@ import {
   type CellKey,
   cellKey,
   DAYS,
+  dayLabel,
   type Day,
   formatHour,
   HOURS,
@@ -132,7 +133,7 @@ export function ScheduleGrid({
                     type="button"
                     disabled={disabled}
                     onClick={() => onChange((prev) => toggleDay(prev, day))}
-                    title={m.schedule_toggle_day({ day })}
+                    title={m.schedule_toggle_day({ day: dayLabel(day) })}
                     className={cn(
                       "flex w-full items-baseline justify-between gap-1 rounded px-1.5 py-1",
                       "font-normal text-sm transition-colors disabled:pointer-events-none",
@@ -140,7 +141,7 @@ export function ScheduleGrid({
                       "hover:bg-hover",
                     )}
                   >
-                    <span>{day}</span>
+                    <span>{dayLabel(day)}</span>
                     <span
                       className={cn(
                         "text-[11px] tabular-nums",
@@ -195,7 +196,7 @@ const Cell = memo(function Cell({
       <button
         type="button"
         aria-pressed={on}
-        aria-label={`${day} ${formatHour(hour)}`}
+        aria-label={`${dayLabel(day)} ${formatHour(hour)}`}
         disabled={disabled}
         onPointerDown={(e) => {
           // Keeps the gesture alive when the pointer leaves this cell.

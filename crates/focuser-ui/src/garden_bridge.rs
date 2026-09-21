@@ -2,6 +2,7 @@
 //! system transports and the upstream wall-clock Pomodoro are not exposed.
 use std::sync::{Arc, Mutex};
 
+use chrono::TimeZone;
 use focuser_app::{Command, CommandErrorPayload, CommandResult};
 use focuser_core::garden::{Config, GardenService, Outcome, StartRequest};
 use serde::Deserialize;
@@ -112,6 +113,35 @@ pub fn run_command(
         {
             return Err(error("请选择屏蔽名单或允许名单。"));
         }
+    }
+    if let Command::GetBlockedEvents { from, to } = command {
+        if from >= to {
+            return Err(error("请选择有效的日期范围。"));
+        }
+        let boundary = |date: chrono::NaiveDate| {
+            chrono::Local
+                .from_local_datetime(&date.and_hms_opt(0, 0, 0).unwrap())
+                .earliest()
+                .map(|date| date.with_timezone(&chrono::Utc))
+                .ok_or_else(|| error("此日期的本地时间边界无效，请调整日期。"))
+        };
+        let start = boundary(from)?;
+        let end = boundary(to)?;
+        let engine = state
+            .engine
+            .lock()
+            .map_err(|_| error("暂时无法读取拦截记录。"))?;
+        let events = engine
+            .db()
+            .get_blocked_events(&start.to_rfc3339(), &end.to_rfc3339())
+            .map_err(|_| error("暂时无法读取拦截记录。"))?
+            .into_iter()
+            .filter(|event| {
+                chrono::DateTime::parse_from_rfc3339(&event.timestamp)
+                    .is_ok_and(|time| time >= start && time < end)
+            })
+            .collect();
+        return Ok(CommandResult::BlockedEvents(events));
     }
     // New lists start inactive. Editing a list must not unexpectedly interrupt work.
     let creating = matches!(command, Command::CreateBlockList { .. });
@@ -331,6 +361,13 @@ mod tests {
         assert!(read_only(&Command::ListBlockLists));
         assert!(read_only(&Command::ExportConfiguration));
         assert!(read_only(&Command::AllowanceList));
+    }
+    #[test]
+    fn frontend_blocked_event_payload_deserializes_as_real_command() {
+        let value = include_str!("../frontend/src/test/fixtures/blocked-events-request.json");
+        let command: Command = serde_json::from_str(value).unwrap();
+        assert!(matches!(command, Command::GetBlockedEvents { from, to }
+            if from.to_string() == "2026-09-21" && to.to_string() == "2026-09-22"));
     }
     #[test]
     fn backend_validation_is_shown_in_chinese() {
