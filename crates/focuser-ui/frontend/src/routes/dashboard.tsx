@@ -4,6 +4,9 @@ import { ArrowRight, Flame, Play, Shield, Sprout, Trophy } from "lucide-react";
 import { useBlockLists, useCreateBlockList } from "@/lib/commands";
 import { GardenScene } from "@/garden/art";
 import { GardenError, GardenLoading, Onboarding } from "@/garden/common";
+import { TimerRing } from "@/garden/timer-ring";
+import { DurationPicker } from "@/garden/duration-picker";
+import { StrictnessSelector } from "@/garden/strictness-selector";
 import {
   countdown,
   duration,
@@ -41,6 +44,7 @@ export function Dashboard() {
       (s) => (s.status === "completed" || s.status === "interrupted") && s.outcome === "pending",
     )
     .slice(0, 3);
+
   return (
     <div className="garden-page">
       <header className="garden-page-header">
@@ -58,7 +62,9 @@ export function Dashboard() {
           走进花园 <ArrowRight size={16} />
         </Link>
       </header>
+
       <Onboarding />
+
       <div className="garden-home-hero">
         <section className="garden-today" aria-label="今日状态">
           <span className="garden-overline">今天已专注</span>
@@ -95,6 +101,7 @@ export function Dashboard() {
         </section>
         <GardenScene seconds={seconds} config={data.config} plants={creditedPlants} />
       </div>
+
       <section className="garden-focus-section">
         <div className="garden-section-heading">
           <h2>
@@ -114,6 +121,7 @@ export function Dashboard() {
           <StartSession />
         )}
       </section>
+
       {pending.length > 0 && (
         <section className="garden-reflections">
           <h2>这一段，完成得怎么样？</h2>
@@ -122,6 +130,7 @@ export function Dashboard() {
           ))}
         </section>
       )}
+
       <footer className="garden-home-note">
         <Sprout size={16} /> 每 1 分钟真实专注获得 1 点经验，完整完成另加
         10%。休息和离线时间不计入。<Link to="/statistics">看看最近的积累</Link>
@@ -142,6 +151,7 @@ function StartSession() {
   const [strict, setStrict] = useState<Strictness>("focus");
   const selected = lists.data?.find((l) => l.id === listId)?.id ?? lists.data?.[0]?.id ?? "";
   const list = lists.data?.find((l) => l.id === selected);
+
   return (
     <form
       className="garden-start"
@@ -170,44 +180,32 @@ function StartSession() {
           placeholder="例如，读完这一章并整理笔记"
         />
       </label>
-      <div className="garden-session-options">
-        <label>
-          任务类别
-          <select value={category} onChange={(e) => setCategory(e.target.value)}>
-            {["阅读", "听课", "写作", "编程", "复习", "其他"].map((c) => (
-              <option key={c}>{c}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          专注（分钟）
-          <input
-            aria-label="专注分钟"
-            type="number"
-            min="1"
-            max="240"
-            value={minutes}
-            onChange={(e) => setMinutes(Number(e.target.value))}
-            required
-          />
-        </label>
-        <label>
-          休息（分钟）
-          <input
-            type="number"
-            min="0"
-            max="60"
-            value={breakMinutes}
-            onChange={(e) => setBreakMinutes(Number(e.target.value))}
-            required
-          />
-        </label>
-        <label>
-          屏蔽列表
+
+      {/* Category Pills & Block List Selector */}
+      <div className="garden-category-row">
+        <div className="garden-cat-pills" role="group" aria-label="任务类别">
+          {["阅读", "听课", "写作", "编程", "复习", "其他"].map((c) => (
+            <button
+              type="button"
+              key={c}
+              onClick={() => setCategory(c)}
+              className={`garden-cat-pill ${category === c ? "active" : ""}`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+
+        <div className="garden-list-select-wrap">
+          <label htmlFor="garden-block-list-select" className="garden-micro-label">
+            关联屏蔽列表
+          </label>
           <select
+            id="garden-block-list-select"
             value={selected}
             onChange={(e) => setListId(e.target.value)}
             disabled={!lists.data?.length}
+            className="garden-select"
           >
             <option value="" disabled>
               先建立一个屏蔽列表
@@ -218,8 +216,9 @@ function StartSession() {
               </option>
             ))}
           </select>
-        </label>
+        </div>
       </div>
+
       {!lists.isPending && !lists.data?.length && (
         <div className="garden-inline-actions">
           <p className="garden-muted">屏蔽列表把娱乐、社交等分心来源放在一起。</p>
@@ -233,8 +232,9 @@ function StartSession() {
           </button>
         </div>
       )}
+
       {list && (
-        <p className="garden-muted">
+        <p className="garden-muted garden-list-hint">
           本次使用「{list.name}」中的 {list.applications.length} 个应用规则和 {list.websites.length}{" "}
           个网站规则。
           <Link className="garden-link" to="/apps">
@@ -247,31 +247,30 @@ function StartSession() {
           {list.applications.length + list.websites.length === 0 && " 当前列表为空，只会计时。"}
         </p>
       )}
-      <fieldset className="garden-strict-picker">
-        <legend>专注强度</legend>
-        {(["gentle", "focus", "deep"] as Strictness[]).map((value) => (
-          <label key={value} className={strict === value ? "selected" : ""}>
-            <input
-              type="radio"
-              name="strict"
-              checked={strict === value}
-              onChange={() => setStrict(value)}
-            />
-            <strong>{strictLabels[value]}</strong>
-            <span>
-              {value === "gentle"
-                ? "随时可以结束"
-                : value === "focus"
-                  ? "等待 30 秒，写下原因"
-                  : "等待 5 分钟，输入确认文字"}
-            </span>
-          </label>
-        ))}
-      </fieldset>
+
+      {/* 21st.dev Style Duration Picker */}
+      <DurationPicker
+        workMinutes={minutes}
+        onWorkChange={setMinutes}
+        breakMinutes={breakMinutes}
+        onBreakChange={setBreakMinutes}
+        disabled={action.isPending}
+      />
+
+      {/* 21st.dev Style Tactile Strictness Selector */}
+      <div className="garden-strict-section">
+        <span className="garden-section-subhead">专注强度</span>
+        <StrictnessSelector
+          value={strict}
+          onChange={setStrict}
+          disabled={action.isPending}
+        />
+      </div>
+
       <div className="garden-start-bottom">
         <p className="garden-muted">结束后保留成果。只给真正投入的时间奖励。</p>
         <button
-          className="garden-button"
+          className="garden-button primary-action"
           type="submit"
           disabled={!selected || action.isPending || minutes < 1 || minutes > 240}
         >
@@ -299,10 +298,21 @@ export function ActiveSession({ session }: { session: Session }) {
     setShowExit(true);
     await action.mutateAsync({ cmd: "request_exit" }).catch(() => {});
   };
+
   return (
     <div className={`garden-active ${isBreak ? "is-break" : ""}`}>
       <div className="garden-active-main">
-        <div>
+        {/* Modern 21st.dev Radial Dial */}
+        <TimerRing
+          totalSecs={isBreak ? session.break_secs : session.planned_secs}
+          elapsedSecs={session.elapsed_secs}
+          remainingSecs={remaining}
+          isBreak={isBreak}
+          task={session.task}
+          category={session.category}
+        />
+
+        <div className="garden-active-details">
           <p className="garden-overline">
             {isBreak
               ? "本次专注已完成 · 休息时间"
@@ -314,23 +324,21 @@ export function ActiveSession({ session }: { session: Session }) {
               ? "这一段成果已保存，休息结束后再开启下一段。"
               : "专注会在设定时间结束，不会自动无限循环。"}
           </p>
-        </div>
-        <div className="garden-timer" role="timer" aria-label="剩余时间">
-          {countdown(remaining)}
+
+          <div className="garden-inline-actions">
+            <span className="garden-muted">已投入 {duration(session.elapsed_secs)}</span>
+            <button
+              className="garden-button secondary small"
+              type="button"
+              disabled={action.isPending}
+              onClick={request}
+            >
+              {isBreak ? "结束休息" : "提前结束"}
+            </button>
+          </div>
         </div>
       </div>
-      <progress value={session.elapsed_secs} max={session.planned_secs} aria-label="本次专注进度" />
-      <div className="garden-inline-actions">
-        <span className="garden-muted">已投入 {duration(session.elapsed_secs)}</span>
-        <button
-          className="garden-button secondary small"
-          type="button"
-          disabled={action.isPending}
-          onClick={request}
-        >
-          {isBreak ? "结束休息" : "提前结束"}
-        </button>
-      </div>
+
       {showExit && (
         <section className="garden-exit" aria-label="安全提前结束">
           <h4>{isBreak ? "休息结束后回到花园" : "留一点时间，再决定"}</h4>

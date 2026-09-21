@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
+import { motion } from "motion/react";
 import { listen } from "@tauri-apps/api/event";
 import { toast } from "sonner";
 import { GardenTheme } from "@/garden/common";
@@ -30,10 +31,12 @@ const NAV = [
   { to: "/allowances", label: "每日额度", icon: Hourglass },
   { to: "/settings", label: "设置", icon: Settings },
 ];
+
 export function AppLayout() {
   useApplySavedLanguage();
   const garden = useGarden();
   const navigate = useNavigate();
+
   useEffect(() => {
     if (!isTauri()) return;
     let disposed = false;
@@ -65,19 +68,23 @@ export function AppLayout() {
       stops.forEach((stop) => stop());
     };
   }, [navigate]);
+
   const active = garden.data?.active;
+
   return (
     <div className="garden-app-shell">
       <GardenTheme />
       <nav className="garden-sidebar" aria-label="主要导航">
         <NavLink to="/" className="garden-brand">
-          <span>
+          <span className="garden-brand-icon">
             <Sprout size={24} />
           </span>
-          <strong>
-            专注花园<small>一点一点，慢慢生长</small>
+          <strong className="garden-brand-title">
+            专注花园
+            <small>一点一点，慢慢生长</small>
           </strong>
         </NavLink>
+
         <div className="garden-nav-links">
           {NAV.map(({ to, label, icon: Icon }, index) => (
             <NavLink
@@ -85,18 +92,33 @@ export function AppLayout() {
               to={to}
               end={to === "/"}
               className={({ isActive }) =>
-                `${isActive ? "active" : ""} ${index === 3 ? "garden-nav-divider" : ""}`
+                `garden-nav-item ${isActive ? "active" : ""} ${index === 3 ? "garden-nav-divider" : ""}`
               }
             >
-              <Icon size={18} />
-              <span>{label}</span>
+              {({ isActive }) => (
+                <>
+                  {isActive && (
+                    <motion.div
+                      layoutId="sidebar-active-pill"
+                      className="garden-nav-active-pill"
+                      transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                    />
+                  )}
+                  <Icon size={18} className="garden-nav-icon" />
+                  <span className="garden-nav-label">{label}</span>
+                </>
+              )}
             </NavLink>
           ))}
         </div>
+
         <div className="garden-sidebar-bottom">
           {active ? (
             <NavLink to="/" className="garden-session-pill">
-              <span>{active.status === "break" ? "正在休息" : "正在专注"}</span>
+              <div className="garden-session-pill-header">
+                <span className="garden-pulse-dot" aria-hidden="true" />
+                <span>{active.status === "break" ? "正在休息" : "正在专注"}</span>
+              </div>
               <strong>
                 {countdown(
                   active.status === "break"
@@ -105,15 +127,16 @@ export function AppLayout() {
                     : active.planned_secs - active.elapsed_secs,
                 )}
               </strong>
-              <small>{active.task}</small>
+              <small title={active.task}>{active.task}</small>
             </NavLink>
           ) : (
-            <p>
+            <p className="garden-sidebar-motto">
               <Leaf size={14} /> 所有成长，留在本机
             </p>
           )}
         </div>
       </nav>
+
       <main className="garden-main">
         <HealthBanner />
         {active?.strict !== "gentle" && active?.status === "work" && (
