@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>NSAppleEventsUsageDescription</key><string>专注花园只在命中你设置的网站规则时，把当前标签页切换到本机拦截页。不会上传或保存浏览历史。</string>
+<key>CFBundleDisplayName</key><string>专注花园</string>
+<key>LSUIElement</key><false/>
+</dict></plist>

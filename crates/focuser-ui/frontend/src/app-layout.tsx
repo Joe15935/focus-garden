@@ -4,148 +4,125 @@ import {
   CalendarClock,
   Globe,
   Hourglass,
-  LayoutDashboard,
+  Leaf,
   ListChecks,
   Settings,
+  Sprout,
 } from "lucide-react";
-import { NavLink, Outlet } from "react-router-dom";
-import { BlockingHealthBanner } from "@/components/blocking-health-banner";
-import { TitleBar } from "@/components/title-bar";
-import { AppIcon } from "@/components/ui/app-icon";
-import { LiveBadge } from "@/components/ui/badge";
-import { UpdatePill } from "@/components/update-pill";
-import { usePomodoroStatus } from "@/lib/commands";
-import { formatCountdown } from "@/lib/duration";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { listen } from "@tauri-apps/api/event";
+import { toast } from "sonner";
+import { GardenTheme } from "@/garden/common";
+import { HealthBanner } from "@/garden/health";
+import { countdown, useGarden } from "@/garden/api";
 import { useApplySavedLanguage } from "@/lib/language";
-import { cn } from "@/lib/utils";
-import { m } from "@/paraglide/messages.js";
+import { isTauri } from "@/lib/transport";
 
-// `label` is a function, not a string: a message read at module scope would
-// freeze the locale that was active when this file was imported.
 const NAV = [
-  { to: "/", label: m.nav_dashboard, icon: LayoutDashboard, end: true },
-  { to: "/block-lists", label: m.nav_block_lists, icon: ListChecks },
-  { to: "/websites", label: m.nav_websites, icon: Globe },
-  { to: "/apps", label: m.nav_applications, icon: AppWindow },
-  { to: "/schedule", label: m.nav_schedule, icon: CalendarClock },
-  { to: "/allowances", label: m.nav_allowances, icon: Hourglass },
-  { to: "/statistics", label: m.nav_statistics, icon: BarChart3 },
-  { to: "/settings", label: m.nav_settings, icon: Settings },
-] as const;
-
+  { to: "/", label: "今天", icon: Sprout },
+  { to: "/garden", label: "我的花园", icon: Leaf },
+  { to: "/statistics", label: "专注足迹", icon: BarChart3 },
+  { to: "/block-lists", label: "屏蔽列表", icon: ListChecks },
+  { to: "/apps", label: "应用限制", icon: AppWindow },
+  { to: "/websites", label: "网站限制", icon: Globe },
+  { to: "/schedule", label: "每周计划", icon: CalendarClock },
+  { to: "/allowances", label: "每日额度", icon: Hourglass },
+  { to: "/settings", label: "设置", icon: Settings },
+];
 export function AppLayout() {
-  // Wraps every route, so this is the one place the saved language reaches the
-  // whole app rather than only the page that happens to read it.
   useApplySavedLanguage();
-
+  const garden = useGarden();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!isTauri()) return;
+    let disposed = false;
+    const stops: (() => void)[] = [];
+    const keep = (stop: () => void) => {
+      if (disposed) stop();
+      else stops.push(stop);
+    };
+    listen<{ kind: string; target: string; message: string; confirmed: boolean }>(
+      "garden-blocked",
+      ({ payload }) => {
+        if (payload.kind === "app" && payload.confirmed)
+          toast(payload.message || `已屏蔽 ${payload.target}`);
+      },
+    ).then(keep);
+    listen<string>("garden-exit-requested", ({ payload }) => {
+      toast(payload || "请通过安全出口结束本次专注。");
+      navigate("/");
+    }).then(keep);
+    listen<string>("garden-phase-changed", ({ payload }) => {
+      if (payload === "break") toast.success("这一段专注完成了，休息一下。成果已经保存。");
+      if (payload === "idle") toast("当前安排已结束，可以回到花园查看记录。");
+    }).then(keep);
+    listen<string>("garden-error", ({ payload }) =>
+      toast.error(payload || "操作未完成，请查看当前状态后重试。"),
+    ).then(keep);
+    return () => {
+      disposed = true;
+      stops.forEach((stop) => stop());
+    };
+  }, [navigate]);
+  const active = garden.data?.active;
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-deep">
-      <TitleBar />
-
-      <div className="flex min-h-0 flex-1">
-        <Sidebar />
-        <main className="app-canvas min-w-0 flex-1 overflow-y-auto bg-background">
-          <BlockingHealthBanner />
-          <Outlet />
-        </main>
-      </div>
-    </div>
-  );
-}
-
-function Sidebar() {
-  return (
-    <nav
-      aria-label={m.nav_landmark()}
-      className="glass flex w-56 shrink-0 flex-col border-border/60 border-r p-3"
-    >
-      <Brand />
-
-      <div className="flex flex-col gap-0.5">
-        {NAV.map(({ to, label, icon: Icon, ...rest }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={"end" in rest ? rest.end : undefined}
-            className={({ isActive }) =>
-              cn(
-                "group relative flex items-center gap-3 rounded-lg px-3 py-2 font-medium text-sm",
-                "transition-colors duration-150",
-                isActive
-                  ? "bg-primary/12 text-foreground"
-                  : // A hairline tint on hover. The previous fill was a solid
-                    // block the width of the sidebar, which read as a selection.
-                    "text-muted-foreground hover:bg-foreground/[0.04] hover:text-foreground",
-              )
-            }
-          >
-            {({ isActive }) => (
-              <>
-                {/* A bar rather than a whole-row fill, so the current page is
-                    findable at a glance without a second colour block. */}
-                <span
-                  aria-hidden
-                  className={cn(
-                    "-translate-y-1/2 absolute top-1/2 left-0 w-[3px] rounded-r-full bg-primary",
-                    "transition-all duration-200",
-                    isActive ? "h-5 opacity-100" : "h-0 opacity-0",
-                  )}
-                />
-                <Icon
-                  aria-hidden
-                  className={cn(
-                    "size-4 shrink-0 transition-colors",
-                    isActive ? "text-primary" : "text-faint-foreground group-hover:text-foreground",
-                  )}
-                />
-                {label()}
-              </>
-            )}
-          </NavLink>
-        ))}
-      </div>
-
-      {/* `mt-auto` on the group, not each child, or only the first moves. */}
-      <div className="mt-auto flex flex-col gap-2 pt-3">
-        <UpdatePill />
-        <SessionPill />
-      </div>
-    </nav>
-  );
-}
-
-function Brand() {
-  return (
-    <div className="mb-5 flex items-center gap-2.5 px-2 py-3">
-      <AppIcon className="size-8 rounded-lg" />
-      <span className="font-semibold text-base text-foreground tracking-tight">Focuser</span>
-    </div>
-  );
-}
-
-/**
- * A running focus session, pinned to the bottom of the sidebar.
- *
- * The countdown is the one thing worth seeing from every page — otherwise you
- * have to keep returning to the Dashboard to check it.
- */
-function SessionPill() {
-  const status = usePomodoroStatus();
-  if (!status.data) return null;
-
-  const phase = status.data.current_phase === "work" ? m.session_focus() : m.session_break();
-
-  return (
-    <div className="glass-strong rounded-lg border border-primary/25 p-3">
-      <div className="flex items-center justify-between gap-2">
-        <LiveBadge tone={status.data.current_phase === "work" ? "primary" : "success"}>
-          {status.data.paused ? m.session_paused() : phase}
-        </LiveBadge>
-        <span className="font-semibold text-foreground text-sm tabular-nums">
-          {formatCountdown(status.data.remaining_secs)}
-        </span>
-      </div>
-      <p className="mt-1.5 truncate text-faint-foreground text-xs">{status.data.block_list_name}</p>
+    <div className="garden-app-shell">
+      <GardenTheme />
+      <nav className="garden-sidebar" aria-label="主要导航">
+        <NavLink to="/" className="garden-brand">
+          <span>
+            <Sprout size={24} />
+          </span>
+          <strong>
+            专注花园<small>一点一点，慢慢生长</small>
+          </strong>
+        </NavLink>
+        <div className="garden-nav-links">
+          {NAV.map(({ to, label, icon: Icon }, index) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === "/"}
+              className={({ isActive }) =>
+                `${isActive ? "active" : ""} ${index === 3 ? "garden-nav-divider" : ""}`
+              }
+            >
+              <Icon size={18} />
+              <span>{label}</span>
+            </NavLink>
+          ))}
+        </div>
+        <div className="garden-sidebar-bottom">
+          {active ? (
+            <NavLink to="/" className="garden-session-pill">
+              <span>{active.status === "break" ? "正在休息" : "正在专注"}</span>
+              <strong>
+                {countdown(
+                  active.status === "break"
+                    ? ((active as typeof active & { break_remaining_secs?: number })
+                        .break_remaining_secs ?? active.break_secs)
+                    : active.planned_secs - active.elapsed_secs,
+                )}
+              </strong>
+              <small>{active.task}</small>
+            </NavLink>
+          ) : (
+            <p>
+              <Leaf size={14} /> 所有成长，留在本机
+            </p>
+          )}
+        </div>
+      </nav>
+      <main className="garden-main">
+        <HealthBanner />
+        {active?.strict !== "gentle" && active?.status === "work" && (
+          <div className="garden-locked-note">
+            本次专注期间，限制规则和设置暂时锁定。提前结束请回到「今天」。
+          </div>
+        )}
+        <Outlet />
+      </main>
     </div>
   );
 }

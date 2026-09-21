@@ -56,7 +56,7 @@ function apply(locale: Locale) {
  * belongs in the layout that wraps every route.
  */
 export function useApplySavedLanguage() {
-  const saved = useSetting(SETTING_KEYS.language, getLocale()).data;
+  const saved = useSetting(SETTING_KEYS.language, "zh").data;
 
   // The stored value is the durable one, so it corrects localStorage rather
   // than the other way round.
@@ -66,7 +66,7 @@ export function useApplySavedLanguage() {
 }
 
 export function useLanguage() {
-  const query = useSetting(SETTING_KEYS.language, getLocale());
+  const query = useSetting(SETTING_KEYS.language, "zh");
   const save = useSetSetting();
   const saved = query.data;
 

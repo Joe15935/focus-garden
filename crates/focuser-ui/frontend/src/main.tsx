@@ -6,6 +6,10 @@ import { AppLayout } from "@/app-layout";
 import { Toaster } from "@/components/ui/toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "@/index.css";
+import "@/garden/garden.css";
+import { Garden } from "@/routes/garden";
+import { setLocale } from "@/paraglide/runtime.js";
+setLocale("zh", { reload: false });
 import { Allowances } from "@/routes/allowances";
 import { Apps } from "@/routes/apps";
 import { BlockLists } from "@/routes/block-lists";
@@ -38,6 +42,7 @@ const router = createHashRouter([
     element: <AppLayout />,
     children: [
       { index: true, element: <Dashboard /> },
+      { path: "garden", element: <Garden /> },
       { path: "block-lists", element: <BlockLists /> },
       { path: "websites", element: <Websites /> },
       { path: "apps", element: <Apps /> },

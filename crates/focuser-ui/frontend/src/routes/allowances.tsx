@@ -15,14 +15,14 @@ import { TargetIcon } from "@/components/ui/target-icon";
 import { Tooltip } from "@/components/ui/tooltip";
 import {
   useAllowances,
-  useBlockingHealth,
-  useBrowserStatus,
   useCreateAllowance,
   useDeleteAllowance,
   useResetAllowanceToday,
   useUpdateAllowance,
 } from "@/lib/commands";
 import { formatDuration } from "@/lib/duration";
+import { useInstalledApps } from "@/garden/api";
+import { useMacHealth } from "@/garden/health";
 import { m } from "@/paraglide/messages.js";
 
 const KINDS = [{ value: "Domain" }, { value: "AppExecutable" }] as const;
@@ -38,29 +38,14 @@ function kindOptions() {
 export function Allowances() {
   const allowances = useAllowances();
   const create = useCreateAllowance();
-  const browsers = useBrowserStatus();
-
-  // Browser time is measured by the extension and nothing else, so a website
-  // allowance without it would sit at "0s used" forever. Blocking stays on in
-  // that case rather than granting an unlimited pass, so say so plainly.
-  const extensionConnected = (browsers.data ?? []).some((b) => b.extension_connected);
+  const apps = useInstalledApps();
+  const health = useMacHealth();
   const hasWebsiteAllowance = (allowances.data ?? []).some(
     (a) => a.allowance.target.kind === "Domain",
   );
-
-  // App time comes from sampling the focused window, which Wayland does not
-  // let anyone ask about. Same rule as above: say so rather than show a timer
-  // that will never move.
-  const health = useBlockingHealth();
-  const hasAppAllowance = (allowances.data ?? []).some(
-    (a) => a.allowance.target.kind === "AppExecutable",
-  );
-  const appTimingBlind = hasAppAllowance && health.data?.app_usage_measurable === false;
-
   const [kind, setKind] = useState<(typeof KINDS)[number]["value"]>("Domain");
   const [value, setValue] = useState("");
   const [minutes, setMinutes] = useState(30);
-  const [strict, setStrict] = useState(true);
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -68,7 +53,7 @@ export function Allowances() {
     if (!target) return;
 
     create.mutate(
-      { target: { kind, value: target }, dailyLimitSecs: minutes * 60, strictMode: strict },
+      { target: { kind, value: target }, dailyLimitSecs: minutes * 60, strictMode: true },
       { onSuccess: () => setValue("") },
     );
   }
@@ -77,25 +62,15 @@ export function Allowances() {
     <Page>
       <PageHeader title={m.allowances_title()} description={m.allowances_description()} />
 
-      {hasWebsiteAllowance && !extensionConnected && (
+      {hasWebsiteAllowance && health.data?.accessibility_granted === false && (
         <Card className="mb-6 border-warning/40" padding="md">
           <p className="flex items-center gap-2 font-medium text-sm text-warning">
             <TriangleAlert aria-hidden className="size-4" />
-            {m.allowances_extension_needed_title()}
+            网页计时需要辅助功能权限
           </p>
           <p className="mt-1 text-muted-foreground text-sm">
-            {m.allowances_extension_needed_body()}
+            请在设置中允许辅助功能和浏览器自动化。网站额度只计算当前前台网页的使用时间，不需要浏览器扩展。
           </p>
-        </Card>
-      )}
-
-      {appTimingBlind && (
-        <Card className="mb-6 border-warning/40" padding="md">
-          <p className="flex items-center gap-2 font-medium text-sm text-warning">
-            <TriangleAlert aria-hidden className="size-4" />
-            {m.allowances_wayland_title()}
-          </p>
-          <p className="mt-1 text-muted-foreground text-sm">{m.allowances_wayland_body()}</p>
         </Card>
       )}
 
@@ -105,6 +80,25 @@ export function Allowances() {
             <Select value={kind} onValueChange={setKind} options={kindOptions()} size="sm" />
           </Labelled>
 
+          {kind === "AppExecutable" && (
+            <Labelled label="已安装应用">
+              <select
+                aria-label="选择额度应用"
+                className="rounded-md border border-border bg-surface px-3 py-2 text-sm"
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+              >
+                <option value="">请选择应用</option>
+                {apps.data
+                  ?.filter((app) => !app.protected)
+                  .map((app) => (
+                    <option key={app.bundle_id + app.path} value={app.executable}>
+                      {app.name}
+                    </option>
+                  ))}
+              </select>
+            </Labelled>
+          )}
           <Labelled
             label={
               kind === "Domain" ? m.allowances_field_domain() : m.allowances_field_executable()
@@ -116,7 +110,7 @@ export function Allowances() {
               size="sm"
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              placeholder={kind === "Domain" ? "youtube.com" : "steam.exe"}
+              placeholder={kind === "Domain" ? "youtube.com" : "应用可执行名称"}
               className="w-56"
             />
           </Labelled>
@@ -132,19 +126,14 @@ export function Allowances() {
             />
           </Labelled>
 
-          <Labelled label={m.allowances_field_only_focused()}>
-            <Switch
-              checked={strict}
-              onCheckedChange={setStrict}
-              aria-label={m.allowances_field_only_focused()}
-            />
-          </Labelled>
-
           <Button type="submit" icon={<Plus />} disabled={!value.trim() || create.isPending}>
             {create.isPending ? m.allowances_adding() : m.allowances_add()}
           </Button>
         </form>
-        <InlineError error={create.error} />
+        <p className="mt-3 text-muted-foreground text-xs">
+          每日额度只计算正在前台使用的应用或网页；后台打开、休眠时间不计入。
+        </p>
+        <InlineError error={create.error ?? apps.error} />
       </Card>
 
       <QueryState
@@ -186,7 +175,7 @@ function AllowanceRow({ status }: { status: AllowanceStatus }) {
     update.mutate({
       id: a.id,
       dailyLimitSecs: a.daily_limit_secs,
-      strictMode: a.strict_mode,
+      strictMode: true,
       enabled: a.enabled,
       ...patch,
     });
@@ -204,7 +193,7 @@ function AllowanceRow({ status }: { status: AllowanceStatus }) {
                 {!a.enabled && <Badge tone="neutral">{m.allowances_badge_paused()}</Badge>}
               </div>
               <p className="mt-0.5 text-faint-foreground text-xs">
-                {a.strict_mode ? m.allowances_counted_focused() : m.allowances_counted_open()}
+                {m.allowances_counted_focused()}
               </p>
             </div>
           </div>

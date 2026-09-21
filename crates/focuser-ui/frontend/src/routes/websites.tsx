@@ -1,4 +1,4 @@
-import { Ban, Globe, Plus, ShieldCheck, TriangleAlert } from "lucide-react";
+import { Ban, Globe, Plus, ShieldCheck } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { ListPicker, resolveSelected } from "@/components/list-picker";
 import { RuleTable } from "@/components/rule-table";
@@ -14,7 +14,6 @@ import { Tabs } from "@/components/ui/tabs";
 import {
   useAddException,
   useAddWebsiteRule,
-  useBlockingHealth,
   useBlockLists,
   useBulkImportWebsites,
   useRemoveException,
@@ -88,17 +87,12 @@ const CATCH_ALL = /^[*.\s]+$/;
 
 export function Websites() {
   const lists = useBlockLists();
-  const health = useBlockingHealth();
   const [rawSelected, setSelected] = useState("");
   const [tab, setTab] = useState<Tab>("blocked");
 
   const all = lists.data ?? [];
   const selected = resolveSelected(all, rawSelected);
   const list = all.find((l) => l.id === selected);
-
-  // A hosts file cannot express a keyword, wildcard or path, so without the
-  // extension those rules do nothing at all. Saying so beats a silent miss.
-  const unenforced = health.data?.extension_only_rules && !health.data.extension_connected;
 
   return (
     <Page>
@@ -107,8 +101,6 @@ export function Websites() {
         description={m.websites_description()}
         actions={<ListPicker lists={all} value={selected} onChange={setSelected} />}
       />
-
-      {unenforced && <ExtensionNeeded />}
 
       <QueryState
         isPending={lists.isPending}
@@ -147,18 +139,6 @@ export function Websites() {
         )}
       </QueryState>
     </Page>
-  );
-}
-
-function ExtensionNeeded() {
-  return (
-    <Card className="mb-6 border-warning/40" padding="md">
-      <p className="flex items-center gap-2 font-medium text-sm text-warning">
-        <TriangleAlert aria-hidden className="size-4" />
-        {m.websites_extension_needed_title()}
-      </p>
-      <p className="mt-1 text-muted-foreground text-sm">{m.websites_extension_needed_body()}</p>
-    </Card>
   );
 }
 

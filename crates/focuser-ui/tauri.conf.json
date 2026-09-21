@@ -1,10 +1,10 @@
 {
-  "productName": "Focuser",
-  "identifier": "com.focuser.app",
+  "productName": "Focus Garden",
+  "identifier": "org.focusgarden.local",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm ci && npm run build",
+    "beforeBuildCommand": "npm run build",
     "frontendDist": "./frontend/dist"
   },
   "app": {
@@ -12,13 +12,13 @@
     "windows": [
       {
         "label": "main",
-        "title": "Focuser",
-        "width": 1100,
-        "height": 720,
-        "minWidth": 900,
-        "minHeight": 600,
+        "title": "专注花园",
+        "width": 1180,
+        "height": 800,
+        "minWidth": 960,
+        "minHeight": 680,
         "resizable": true,
-        "decorations": false,
+        "decorations": true,
         "transparent": false
       }
     ],
@@ -28,23 +28,28 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
-    "createUpdaterArtifacts": "v1Compatible",
+    "targets": [
+      "app"
+    ],
+    "createUpdaterArtifacts": false,
     "icon": [
+      "icons/icon.icns",
+      "icons/icon.png",
       "icons/32x32.png",
       "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.ico",
-      "icons/icon.png"
+      "icons/128x128@2x.png"
     ],
-    "externalBin": [
-      "binaries/focuser-cli",
-      "binaries/focuser-native"
-    ],
-    "resources": [],
-    "copyright": "Copyright 2026 Focuser Contributors",
-    "shortDescription": "Website and application blocker",
-    "longDescription": "Focuser is a free, open-source website and application blocker that helps you stay focused by blocking distracting websites and apps.",
+    "externalBin": [],
+    "resources": {
+      "../../THIRD_PARTY_NOTICES": "THIRD_PARTY_NOTICES",
+      "../../LICENSE": "LICENSE",
+      "../../docs/licenses/": "docs/licenses/",
+      "../../docs/使用说明.md": "docs/使用说明.md",
+      "../../docs/数据与恢复.md": "docs/数据与恢复.md"
+    },
+    "copyright": "Focuser Contributors; Focus Garden Contributors",
+    "shortDescription": "本地专注与成长花园",
+    "longDescription": "完全本地的中文专注花园，复用开源规则引擎与 macOS 原生能力。",
     "windows": {
       "nsis": {
         "installMode": "both",
@@ -57,7 +62,7 @@
       "wix": null
     },
     "macOS": {
-      "minimumSystemVersion": "10.15"
+      "minimumSystemVersion": "13.0"
     },
     "linux": {
       "deb": {
@@ -71,15 +76,6 @@
       }
     }
   },
-  "plugins": {
-    "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJGQjZGN0EzODM5NEY3N0EKUldSNjk1U0RvL2UydjlmRlBHMUhYc2Y3L1NpV2xLd2o3VVc5S0gvSjN0Q2JtaXNtVmt1UUh5aWEK",
-      "endpoints": [
-        "https://github.com/aadeshrao123/Focuser/releases/latest/download/latest.json"
-      ],
-      "windows": {
-        "installMode": "passive"
-      }
-    }
-  }
+  "plugins": {},
+  "version": "0.1.0"
 }

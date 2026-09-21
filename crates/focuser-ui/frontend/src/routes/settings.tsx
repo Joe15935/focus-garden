@@ -1,220 +1,110 @@
-import { useEffect, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
-import { BrowserStatusList } from "@/components/browser-status";
-import { ConfigTransfer } from "@/components/config-transfer";
-import { SettingRow, SettingsSection } from "@/components/setting-row";
-import { PageHeader } from "@/components/ui/card";
-import { ConfirmButton } from "@/components/ui/confirm-button";
-import { InlineError } from "@/components/ui/feedback";
-import { NumberField } from "@/components/ui/number-field";
-import { Page } from "@/components/ui/page";
-import { Select } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { UpdateCheck } from "@/components/update-check";
+import { useState } from "react";
 import { useAutostart } from "@/lib/autostart";
-import {
-  useAppVersion,
-  useDeleteAllData,
-  useResetSettings,
-  useSetStatsRetention,
-  useStatsRetention,
-} from "@/lib/commands";
-import { useLanguage } from "@/lib/language";
-import {
-  MAX_RETENTION_DAYS,
-  SETTING_KEYS,
-  useBooleanSetting,
-  useNumberSetting,
-} from "@/lib/settings";
-import { m } from "@/paraglide/messages.js";
+import { Switch } from "@/components/ui/switch";
+import { useGarden, useGardenAction } from "@/garden/api";
+import { GardenError, GardenLoading, GoalSettings } from "@/garden/common";
+import { PermissionPanel } from "@/garden/health";
+import { ExportActions } from "@/garden/export";
 
 export function Settings() {
+  const garden = useGarden();
+  const action = useGardenAction();
   const autostart = useAutostart();
-  const enforceBrowsers = useBooleanSetting(SETTING_KEYS.blockUnsupportedBrowsers, true);
-  const gracePeriod = useNumberSetting(SETTING_KEYS.extensionGracePeriod, 60);
-  const language = useLanguage();
-
-  const retention = useStatsRetention();
-  const setRetention = useSetStatsRetention();
-  const reset = useResetSettings();
-  const deleteAll = useDeleteAllData();
-  const version = useAppVersion();
-
-  // The sidebar badge links here promising the update button, so find it.
-  const [params] = useSearchParams();
-  const highlightUpdates = params.get("highlight") === "updates";
-  const updatesRow = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (highlightUpdates) updatesRow.current?.scrollIntoView({ block: "center" });
-  }, [highlightUpdates]);
-
+  const [notice, setNotice] = useState("");
+  if (garden.isPending) return <GardenLoading />;
+  const config = garden.data?.config;
   return (
-    // One column, not two. Splitting settings left/right meant a setting's
-    // position on the page carried no meaning — you had to scan both sides.
-    <Page>
-      <PageHeader title={m.settings_title()} description={m.settings_description()} />
-
-      <SettingsSection title={m.settings_section_startup()}>
-        <SettingRow
-          label={m.settings_autostart()}
-          description={
-            autostart.needsAdmin
-              ? m.settings_autostart_pending()
-              : autostart.supported
-                ? m.settings_autostart_description()
-                : m.settings_autostart_unsupported()
-          }
-          control={
-            <Switch
-              checked={autostart.value}
-              onCheckedChange={autostart.set}
-              disabled={!autostart.supported || autostart.isPending || autostart.isSaving}
-              aria-label={m.settings_autostart()}
-            />
-          }
-        />
-      </SettingsSection>
-
-      <SettingsSection
-        title={m.settings_section_browsers()}
-        description={m.settings_browsers_description()}
-      >
-        <SettingRow
-          label={m.settings_close_browsers()}
-          description={m.settings_close_browsers_description()}
-          control={
-            <Switch
-              checked={enforceBrowsers.value}
-              onCheckedChange={enforceBrowsers.set}
-              disabled={enforceBrowsers.isPending || enforceBrowsers.isSaving}
-              aria-label={m.settings_close_browsers()}
-            />
-          }
-        />
-        <SettingRow
-          label={m.settings_grace_period()}
-          htmlFor="grace-period"
-          description={m.settings_grace_period_description()}
-          control={
-            <NumberField
-              id="grace-period"
-              value={gracePeriod.value}
-              onCommit={gracePeriod.set}
-              min={5}
-              max={3600}
-              step={5}
-              suffix={m.settings_seconds_suffix()}
-              disabled={!enforceBrowsers.value || gracePeriod.isPending}
-            />
-          }
-        />
-      </SettingsSection>
-
-      <SettingsSection
-        title={m.settings_section_extension()}
-        description={m.settings_extension_description()}
-        flush
-      >
-        <BrowserStatusList />
-      </SettingsSection>
-
-      <SettingsSection title={m.settings_section_data()}>
-        <SettingRow
-          label={m.settings_retention()}
-          htmlFor="retention"
-          description={m.settings_retention_description()}
-          control={
-            <NumberField
-              id="retention"
-              value={retention.data ?? 30}
-              onCommit={(days) => setRetention.mutate(days)}
-              min={1}
-              max={MAX_RETENTION_DAYS}
-              suffix={m.settings_days_suffix()}
-              disabled={retention.isPending}
-            />
-          }
-        />
-        <SettingRow
-          label={m.settings_config_file()}
-          description={m.settings_config_file_description()}
-          control={<ConfigTransfer />}
-        />
-        <SettingRow
-          label={m.settings_reset()}
-          description={m.settings_reset_description()}
-          control={
-            <ConfirmButton variant="outline" size="sm" onConfirm={() => reset.mutate()}>
-              {m.settings_reset_action()}
-            </ConfirmButton>
-          }
-        />
-        <SettingRow
-          label={m.settings_delete_all()}
-          description={m.settings_delete_all_description()}
-          control={
-            <ConfirmButton
-              variant="outline"
-              size="sm"
-              confirmLabel={m.config_confirm_delete()}
-              onConfirm={() => deleteAll.mutate()}
-              disabled={deleteAll.isPending}
-            >
-              {m.settings_delete_all_action()}
-            </ConfirmButton>
-          }
-        />
-      </SettingsSection>
-
-      <SettingsSection title={m.settings_section_language()}>
-        <SettingRow
-          label={m.settings_language()}
-          htmlFor="language"
-          description={m.settings_language_description()}
-          control={
-            <Select
-              id="language"
-              value={language.value}
-              onValueChange={language.set}
-              options={language.options}
-              size="sm"
-              disabled={language.isPending}
-              aria-label={m.settings_language()}
-            />
-          }
-        />
-      </SettingsSection>
-
-      <SettingsSection title={m.settings_section_about()}>
-        <SettingRow label={m.settings_version()} control={<Version value={version.data} />} />
-        <div ref={updatesRow}>
-          <SettingRow
-            label={m.settings_updates()}
-            control={<UpdateCheck />}
-            highlight={highlightUpdates}
+    <div className="garden-page garden-settings">
+      <header className="garden-page-header">
+        <div>
+          <p className="garden-date">让专注适合自己的生活</p>
+          <h1>设置</h1>
+        </div>
+      </header>
+      <PermissionPanel />
+      <section className="garden-settings-section">
+        <h2>日常习惯</h2>
+        <div className="garden-permission-row">
+          <div>
+            <strong>登录时启动</strong>
+            <p>打开 Mac 后，在菜单栏陪你开始一天。</p>
+          </div>
+          <Switch
+            aria-label="登录时启动"
+            checked={autostart.value}
+            onCheckedChange={autostart.set}
+            disabled={!autostart.supported || autostart.isPending || autostart.isSaving}
           />
         </div>
-      </SettingsSection>
-
-      <InlineError
-        error={
-          autostart.error ??
-          enforceBrowsers.error ??
-          gracePeriod.error ??
-          setRetention.error ??
-          reset.error ??
-          deleteAll.error
-        }
-      />
-    </Page>
-  );
-}
-
-function Version({ value }: { value?: string }) {
-  return (
-    <span className="text-muted-foreground text-sm tabular-nums">
-      {value ? `Focuser ${value}` : "—"}
-    </span>
+        <GardenError error={autostart.error} />
+        {config && <GoalSettings config={config} />}
+      </section>
+      <section className="garden-settings-section">
+        <h2>外观与语言</h2>
+        {config && (
+          <div className="garden-permission-row">
+            <div>
+              <strong>颜色模式</strong>
+              <p>所有页面跟随同一种外观。</p>
+            </div>
+            <select
+              aria-label="颜色模式"
+              value={config.theme}
+              onChange={(e) =>
+                action.mutate({ cmd: "update_config", args: { ...config, theme: e.target.value } })
+              }
+            >
+              <option value="system">跟随系统</option>
+              <option value="light">浅色</option>
+              <option value="dark">深色</option>
+            </select>
+          </div>
+        )}
+        <div className="garden-permission-row">
+          <div>
+            <strong>界面语言</strong>
+            <p>简体中文</p>
+          </div>
+          <span className="garden-muted">中文优先</span>
+        </div>
+        <GardenError error={action.error} />
+      </section>
+      <section className="garden-settings-section">
+        <h2>只属于你的本地数据</h2>
+        <p>
+          无需账号、订阅或云服务。专注记录、屏蔽规则、目标和花园保存在本机应用数据目录。JSON
+          用于本地归档，CSV 用于查看和分析。完整恢复请先退出应用，再备份整个数据目录。
+        </p>
+        <ExportActions />
+        <p className="garden-muted">
+          应用异常退出或 Mac
+          休眠期间不赠送专注时长。重新打开后，未完成会话按中断恢复，已获得的成果仍在。
+        </p>
+      </section>
+      <section className="garden-settings-section">
+        <h2>安全出口</h2>
+        <p>
+          温和模式可以立即结束；专注模式等待 30 秒并填写原因；深度专注等待 5
+          分钟并输入确认文字。每次提前结束都会如实记录。
+        </p>
+        <p className="garden-muted">
+          本应用不修改系统 hosts、代理、SIP 或 FileVault。限制只在本应用运行时生效。遇到故障，可通过
+          macOS 强制退出停止本应用。
+        </p>
+        <button
+          type="button"
+          className="garden-button secondary small"
+          onClick={() => {
+            localStorage.removeItem("focus-garden-onboarding");
+            setNotice("已恢复首次引导，回到首页即可查看。");
+          }}
+        >
+          再次显示首次引导
+        </button>
+        {notice && <p role="status">{notice}</p>}
+      </section>
+      <p className="garden-muted">专注花园 0.1.0 · 基于 Focuser 0.7.3（MIT），第三方许可随应用提供。</p>
+      <GardenError error={garden.error} />
+    </div>
   );
 }
