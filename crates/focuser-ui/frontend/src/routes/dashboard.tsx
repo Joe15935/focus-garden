@@ -305,7 +305,7 @@ export function ActiveSession({ session }: { session: Session }) {
         {/* Modern 21st.dev Radial Dial */}
         <TimerRing
           totalSecs={isBreak ? session.break_secs : session.planned_secs}
-          elapsedSecs={session.elapsed_secs}
+          elapsedSecs={isBreak ? session.break_secs - remaining : session.elapsed_secs}
           remainingSecs={remaining}
           isBreak={isBreak}
           task={session.task}
