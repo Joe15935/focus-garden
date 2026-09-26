@@ -13,5 +13,13 @@ cd ..
 npx --yes @tauri-apps/cli@2.10.1 build --bundles app
 
 cd ../..
-codesign --force --deep --sign - --identifier org.focusgarden.local "target/release/bundle/macos/Focus Garden.app"
+# A fixed local certificate keeps macOS privacy permissions (Accessibility,
+# Automation) across rebuilds; without one, fall back to an ad-hoc signature.
+# Create it once with scripts/create-local-signing.sh.
+IDENTITY="-"
+if security find-identity -p codesigning 2>/dev/null | grep -q '"Focus Garden Local Signing"'; then
+  IDENTITY="Focus Garden Local Signing"
+fi
+echo "codesign identity: $IDENTITY"
+codesign --force --deep --sign "$IDENTITY" --identifier org.focusgarden.local "target/release/bundle/macos/Focus Garden.app"
 codesign --verify --deep --strict "target/release/bundle/macos/Focus Garden.app"

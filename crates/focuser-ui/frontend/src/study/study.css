@@ -250,3 +250,25 @@
   gap: 6px;
   font-size: 12px;
 }
+
+.study-next {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px 22px;
+  margin-bottom: 16px;
+  border-radius: 14px;
+  background: var(--primary-dim);
+  border: 1px solid var(--primary-glow);
+}
+.study-next strong {
+  font-size: 20px;
+  font-weight: 600;
+}
+.study-next .study-actions {
+  justify-content: flex-start;
+}
+.study-next .garden-button.small {
+  font-size: 14px;
+  padding: 11px 20px;
+}

@@ -3,7 +3,9 @@
 //! Reuses Focuser's MIT rule types, schedules and allowance ledger. mado's
 //! separately MIT-licensed macOS adapter supplies local foreground information;
 //! website enrichment (which can fetch favicons) is deliberately never enabled.
-//! This module never kills another application, edits hosts, or starts a server.
+//! A blocked application is asked to quit the normal way (like ⌘Q), so it
+//! stops playing in the background; apps may still ask to save first. It is
+//! never force-killed. This module never edits hosts or starts a server.
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, OnceLock};
@@ -802,6 +804,36 @@ fn confirm_dispatched_hide(
     ))
 }
 
+/// How many readbacks (about 100 ms apart) to wait for a polite quit.
+#[cfg(target_os = "macos")]
+const QUIT_POLLS: u32 = 25;
+
+/// A polite quit has succeeded only once the process is observed gone.
+#[cfg(target_os = "macos")]
+fn confirm_dispatched_quit(
+    dispatch: HideDispatch,
+    mut observe_gone: impl FnMut() -> Result<bool, AttemptError>,
+) -> Result<QuitOutcome, AttemptError> {
+    if matches!(dispatch, HideDispatch::NotSent) {
+        return Ok(QuitOutcome::NotSent);
+    }
+    for _ in 0..QUIT_POLLS {
+        if observe_gone()? {
+            return Ok(QuitOutcome::Quit);
+        }
+    }
+    Ok(QuitOutcome::StillRunning)
+}
+
+#[cfg(target_os = "macos")]
+#[derive(Debug, PartialEq, Eq)]
+enum QuitOutcome {
+    NotSent,
+    Quit,
+    /// Still running (e.g. it is asking to save). The caller hides it instead.
+    StillRunning,
+}
+
 /// Root starts this once, after constructing its independent garden ledger.
 /// The worker acquires garden and engine locks in separate scopes, never nested.
 pub fn start(app: tauri::AppHandle, state: Arc<crate::AppState>, garden: crate::GardenState) {
@@ -929,7 +961,7 @@ pub fn start(app: tauri::AppHandle, state: Arc<crate::AppState>, garden: crate::
             {
                 dispatched = Some(key.clone());
                 let result = if event.kind == "app" {
-                    native::hide_app(&app, &front)
+                    native::quit_app(&app, &front)
                 } else {
                     native::redirect_browser(&app, &front, &blocked_url(&page, &front, &event))
                 };
@@ -1151,6 +1183,73 @@ mod native {
                 )
             })
             .map_err(AttemptError::Uncertain)
+        })
+    }
+
+    /// Asks the blocked app to quit like ⌘Q, so audio and video stop too.
+    /// If it is still running afterwards (for example it shows a save dialog),
+    /// it is hidden instead; nothing is ever force-killed.
+    pub fn quit_app(
+        handle: &tauri::AppHandle,
+        expected: &Foreground,
+    ) -> Result<bool, AttemptError> {
+        if unsafe { pthread_main_np() } != 0 {
+            return Err("应用限制需要后台调度，本次未执行。".into());
+        }
+        let permit = Arc::new(DispatchPermit::default());
+        let ticket = permit.clone();
+        let target = expected.clone();
+        let (sender, receiver) = std::sync::mpsc::sync_channel(1);
+        handle
+            .run_on_main_thread(move || {
+                if ticket.claim() {
+                    let _ = sender.send(quit_once_on_main(&target));
+                }
+            })
+            .map_err(|_| "无法在应用主线程执行退出。".to_string())?;
+        let dispatch = match receiver.recv_timeout(Duration::from_secs(2)) {
+            Ok(result) => result?,
+            Err(_) if permit.cancel_before_dispatch() => {
+                return Err("应用主线程繁忙，本次尚未执行退出。".into());
+            }
+            Err(_) => {
+                return Err(AttemptError::Uncertain(
+                    "应用退出响应超时，结果未知。".into(),
+                ));
+            }
+        };
+        let outcome = confirm_dispatched_quit(dispatch, || {
+            std::thread::sleep(Duration::from_millis(100));
+            let target = expected.clone();
+            query_on_main(handle, move || {
+                Ok(
+                    NSRunningApplication::runningApplicationWithProcessIdentifier(target.pid)
+                        .is_none_or(|running| running.isTerminated()),
+                )
+            })
+            .map_err(AttemptError::Uncertain)
+        })?;
+        match outcome {
+            QuitOutcome::NotSent => Ok(false),
+            QuitOutcome::Quit => Ok(true),
+            QuitOutcome::StillRunning => hide_app(handle, expected),
+        }
+    }
+
+    fn quit_once_on_main(expected: &Foreground) -> Result<HideDispatch, AttemptError> {
+        let fresh = foreground_on_main(false, false)?;
+        if !fresh.same_target(expected) || fresh.protected() {
+            return Ok(HideDispatch::NotSent);
+        }
+        let Some(app) = NSRunningApplication::runningApplicationWithProcessIdentifier(expected.pid)
+        else {
+            return Ok(HideDispatch::NotSent);
+        };
+        if !app.isActive() || app.isTerminated() {
+            return Ok(HideDispatch::NotSent);
+        }
+        Ok(HideDispatch::Sent {
+            system_reported_success: app.terminate(),
         })
     }
 
@@ -1450,6 +1549,38 @@ mod tests {
             || Err(AttemptError::Uncertain("readback timed out".into())),
         );
         assert!(retain_dispatch(&read_error));
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn a_quit_counts_only_when_the_process_is_seen_gone() {
+        let mut reads = 0;
+        let quit = confirm_dispatched_quit(
+            HideDispatch::Sent {
+                system_reported_success: true,
+            },
+            || {
+                reads += 1;
+                Ok(reads == 4)
+            },
+        );
+        assert!(matches!(quit, Ok(QuitOutcome::Quit)));
+        let mut reads = 0;
+        let stuck = confirm_dispatched_quit(
+            HideDispatch::Sent {
+                system_reported_success: true,
+            },
+            || {
+                reads += 1;
+                Ok(false)
+            },
+        );
+        assert!(matches!(stuck, Ok(QuitOutcome::StillRunning)));
+        assert_eq!(reads, QUIT_POLLS);
+        let untouched = confirm_dispatched_quit(HideDispatch::NotSent, || {
+            panic!("a pre-dispatch rejection must not enter confirmation")
+        });
+        assert!(matches!(untouched, Ok(QuitOutcome::NotSent)));
     }
 
     #[cfg(target_os = "macos")]

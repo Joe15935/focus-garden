@@ -947,7 +947,7 @@ function PhoneSection({
     <section className="study-card">
       <h2>在手机上查看</h2>
       <p className="garden-muted">
-        选一个 iPhone 也能打开的文件夹（例如 iCloud 云盘里的一个文件夹）。打开学习导航时，会把未来 7
+        选一个 iPhone 也能打开的文件夹（例如 iCloud 云盘里的一个文件夹）。专注花园开着时，会自动把未来 7
         天的安排和到期复习写成「学习导航-本周.html」，在 iPhone 的「文件」App 里点开即可查看。
         这是只读副本：记录仍在 Mac 上做，不需要账号、服务器或订阅。
       </p>

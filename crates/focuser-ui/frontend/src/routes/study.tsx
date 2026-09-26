@@ -4,7 +4,7 @@ import { GardenError, GardenLoading } from "@/garden/common";
 import { useStudy, useStudyAction } from "@/study/api";
 import { CalendarPanel } from "@/study/calendar-panel";
 import { pickText } from "@/study/hooks";
-import { useMirrorSync } from "@/study/mirror-sync";
+import { useMirrorStatus } from "@/study/mirror-sync";
 import {
   blankDoc,
   dueReviewCount,
@@ -51,7 +51,7 @@ export function Study() {
 
 function Navigator({ snapshot, doc }: { snapshot: StudySnapshot; doc: StudyDoc }) {
   const [tab, setTab] = useState<Tab>("today");
-  const mirror = useMirrorSync(snapshot, doc);
+  const mirror = useMirrorStatus((s) => s.status);
   const due = dueReviewCount(snapshot, localToday());
   return (
     <div className="garden-page study-page">

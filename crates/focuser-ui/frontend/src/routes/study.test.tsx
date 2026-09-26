@@ -110,6 +110,14 @@ function wrap(node: ReactNode) {
   return <QueryClientProvider client={client}>{node}</QueryClientProvider>;
 }
 
+/** The day-list row (not the 下一项 card) showing `title`. */
+async function row(title: string): Promise<HTMLElement> {
+  const nodes = await screen.findAllByText(title);
+  const li = nodes.map((n) => n.closest("li")).find(Boolean);
+  if (!li) throw new Error(`no row for ${title}`);
+  return li as HTMLElement;
+}
+
 function studyCalls(cmd: string) {
   return invoke.mock.calls.filter(
     ([name, payload]) => name === "study_command" && payload.command.cmd === cmd,
@@ -144,16 +152,15 @@ describe("学习导航 page", () => {
   it("shows an honest, validated plan with lectures bound to the catalogue", async () => {
     render(wrap(<Study />));
     expect(await screen.findByText(/逐项校验通过/)).toBeInTheDocument();
-    expect(screen.getByText("民法·第一讲")).toBeInTheDocument();
+    expect(screen.getAllByText("民法·第一讲").length).toBeGreaterThan(0);
     expect(screen.getByText("民法·第三讲")).toBeInTheDocument();
     expect(screen.getByText(/首轮剩余 10 节/)).toBeInTheDocument();
   });
 
   it("starting a task goes through the native start_task exactly once", async () => {
     render(wrap(<Study />));
-    await screen.findByText("民法·第一讲");
-    const row = screen.getByText("民法·第一讲").closest("li") as HTMLElement;
-    fireEvent.click(within(row).getByRole("button", { name: /开始/ }));
+    const lecture = await row("民法·第一讲");
+    fireEvent.click(within(lecture).getByRole("button", { name: /开始/ }));
     await waitFor(() => expect(studyCalls("start_task")).toHaveLength(1));
     expect(studyCalls("start_task")[0]?.[1].command.args).toMatchObject({
       occurrence_id: "2026-09-28:law-1",
@@ -170,12 +177,21 @@ describe("学习导航 page", () => {
     ).toHaveLength(0);
   });
 
+  it("shows one obvious next task with its own start button", async () => {
+    render(wrap(<Study />));
+    const card = (await screen.findByText(/^下一项/)).closest("section") as HTMLElement;
+    expect(within(card).getByText("民法·第一讲")).toBeInTheDocument();
+    fireEvent.click(within(card).getByRole("button", { name: /开始/ }));
+    await waitFor(() => expect(studyCalls("start_task")).toHaveLength(1));
+    expect(studyCalls("start_task")[0]?.[1].command.args.task_key).toBe("lecture:c1");
+  });
+
   it("an active garden session disables starting and is shown instead", async () => {
     gardenActive = session({ status: "work", elapsed_secs: 60, task: "别的事" });
     render(wrap(<Study />));
     expect(await screen.findByText("进行中：别的事")).toBeInTheDocument();
-    const row = (await screen.findByText("民法·第一讲")).closest("li") as HTMLElement;
-    expect(within(row).getByRole("button", { name: /开始/ })).toBeDisabled();
+    const lectureRow = await row("民法·第一讲");
+    expect(within(lectureRow).getByRole("button", { name: /开始/ })).toBeDisabled();
   });
 
   it("a finished linked session asks for the result and records it with the session id", async () => {
@@ -194,7 +210,7 @@ describe("学习导航 page", () => {
       ],
     });
     render(wrap(<Study />));
-    const done = await screen.findByRole("button", { name: "整项完成" });
+    const done = within(await row("民法·第一讲")).getByRole("button", { name: "整项完成" });
     fireEvent.click(done);
     await waitFor(() => expect(studyCalls("append_event")).toHaveLength(1));
     const event = studyCalls("append_event")[0]?.[1].command.args.event;
@@ -229,9 +245,9 @@ describe("学习导航 page", () => {
       ],
     });
     render(wrap(<Study />));
-    const row = (await screen.findByText("民法·第一讲")).closest("li") as HTMLElement;
-    expect(within(row).getByText(/已记录：听完/)).toBeInTheDocument();
-    expect(within(row).queryByRole("button", { name: /开始/ })).toBeNull();
+    const lectureRow = await row("民法·第一讲");
+    expect(within(lectureRow).getByText(/已记录：听完/)).toBeInTheDocument();
+    expect(within(lectureRow).queryByRole("button", { name: /开始/ })).toBeNull();
     expect(screen.getByText(/首轮剩余 9 节/)).toBeInTheDocument();
   });
 

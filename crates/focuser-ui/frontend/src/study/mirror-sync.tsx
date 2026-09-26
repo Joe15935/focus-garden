@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { studyCommand, usePlan } from "./api";
+import { useEffect, useMemo, useRef } from "react";
+import { create } from "zustand";
+import { studyCommand, usePlan, useStudy } from "./api";
 import * as C from "./core";
 import { mirrorHtml, mirrorIcs } from "./mirror";
 import {
@@ -13,12 +14,31 @@ import {
 } from "./model";
 import type { PlanRequest } from "./planner";
 
+type MirrorStatus = { at: string; error: string | null } | null;
+/** Last phone-copy write, shown in 「规则与数据」. */
+export const useMirrorStatus = create<{ status: MirrorStatus; set: (s: MirrorStatus) => void }>(
+  (set) => ({ status: null, set: (status) => set({ status }) }),
+);
+
 /**
- * Keeps the phone copy current while 学习导航 is open. Writes only when the
- * content actually changed, and only into the folder the user chose.
+ * Mounted once for the whole app: keeps the phone copy current whenever
+ * 专注花园 is open (not only on the 学习导航 page). Loading the study data here
+ * also triggers the daily automatic backup. Writes only when content changed.
  */
-export function useMirrorSync(snapshot: StudySnapshot, doc: StudyDoc) {
-  const [status, setStatus] = useState<{ at: string; error: string | null } | null>(null);
+export function StudyBackground() {
+  const study = useStudy();
+  const snapshot = study.data;
+  if (!snapshot?.doc || !snapshot.mirror_dir) return null;
+  return <MirrorWriter snapshot={snapshot} doc={snapshot.doc} />;
+}
+
+function MirrorWriter({ snapshot, doc }: { snapshot: StudySnapshot; doc: StudyDoc }) {
+  useMirrorSync(snapshot, doc);
+  return null;
+}
+
+function useMirrorSync(snapshot: StudySnapshot, doc: StudyDoc) {
+  const setStatus = useMirrorStatus((s) => s.set);
   const last = useRef("");
   const today = localToday();
   const request = useMemo<PlanRequest | null>(
@@ -76,6 +96,5 @@ export function useMirrorSync(snapshot: StudySnapshot, doc: StudyDoc) {
         last.current = "";
         setStatus({ at: generatedAt, error: e instanceof Error ? e.message : String(e) });
       });
-  }, [response, snapshot, doc, today]);
-  return status;
+  }, [response, snapshot, doc, today, setStatus]);
 }

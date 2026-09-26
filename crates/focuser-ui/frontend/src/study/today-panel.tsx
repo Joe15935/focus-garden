@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, ChevronLeft, ChevronRight, Download, Play, RotateCcw } from "lucide-react";
 import { useMemo, useState } from "react";
+import { create } from "zustand";
 import {
   GARDEN_KEY,
   gardenCommand,
@@ -159,6 +160,16 @@ export function TodayPanel({
         )
       ) : (
         <>
+          {date === today && !active && (plan.status === "FEASIBLE" || acceptedData) && (
+            <NextUp
+              snapshot={snapshot}
+              doc={doc}
+              date={date}
+              blocks={blocks}
+              slots={slots}
+              sessions={garden.data?.sessions ?? []}
+            />
+          )}
           <PlanStatus plan={plan} doc={doc} date={date} snapshot={snapshot} goTo={goTo} />
           {stale && (
             <p className="study-note warning">
@@ -378,8 +389,7 @@ function Timeline({
   activeSession: Session | null;
 }) {
   const lists = useBlockLists();
-  const [listId, setListId] = useState("");
-  const [strict, setStrict] = useState<Strictness>("focus");
+  const { listId, strict, setListId, setStrict } = useFocusChoice();
   const selected = lists.data?.find((l) => l.id === listId)?.id ?? lists.data?.[0]?.id ?? "";
   const today = localToday();
   const now = date === today ? localMinutes() : -1;
@@ -946,6 +956,82 @@ function Replan({
         </button>
       </div>
       <GardenError error={error} />
+    </section>
+  );
+}
+
+/** The block list and strictness chosen for starting study tasks, shared by 「下一项」 and the day list. */
+const useFocusChoice = create<{
+  listId: string;
+  strict: Strictness;
+  setListId: (id: string) => void;
+  setStrict: (s: Strictness) => void;
+}>((set) => ({
+  listId: "",
+  strict: "focus",
+  setListId: (listId) => set({ listId }),
+  setStrict: (strict) => set({ strict }),
+}));
+
+/** One obvious answer to "what now?": the next unfinished study task and its start button. */
+function NextUp({
+  snapshot,
+  doc,
+  date,
+  blocks,
+  slots,
+  sessions,
+}: {
+  snapshot: StudySnapshot;
+  doc: StudyDoc;
+  date: string;
+  blocks: C.Block[];
+  slots: LectureSlot[];
+  sessions: Session[];
+}) {
+  const lists = useBlockLists();
+  const { listId, strict } = useFocusChoice();
+  const selected = lists.data?.find((l) => l.id === listId)?.id ?? lists.data?.[0]?.id ?? "";
+  const now = localMinutes();
+  const open = blocks
+    .filter((b) => !b.fixed && STUDY_CATEGORIES.has(b.category))
+    .filter(
+      (b) => !taskProgress(taskKeyFor(date, b.id, slots, doc.policy.phase), snapshot.events).done,
+    )
+    .sort((a, b) => a.start - b.start);
+  const next = open.find((b) => b.end > now) ?? open[0];
+  if (!next)
+    return (
+      <section className="study-next done">
+        <strong>今天的学习任务都记录完了。</strong>
+        <span className="garden-muted">可以休息，或者在下面补记其他内容。</span>
+      </section>
+    );
+  const focus = next.category === "english" ? englishFocus(doc, snapshot.events, next.id) : null;
+  return (
+    <section className="study-next">
+      <span className="garden-muted">
+        下一项 · {C.timeText(next.start)}–{C.timeText(next.end)} · {C.PLACE_NAMES[next.entry]}
+        {next.end <= now ? " · 已过原定时间，可以直接开始" : ""}
+      </span>
+      <strong>
+        {titleFor(next, slots, doc.policy.phase)}
+        {focus ? `（${focus}）` : ""}
+      </strong>
+      <TaskActions
+        snapshot={snapshot}
+        doc={doc}
+        date={date}
+        block={next}
+        slots={slots}
+        sessions={sessions}
+        activeSession={null}
+        listId={selected}
+        strict={strict}
+      />
+      {!lists.data?.length && (
+        <span className="garden-muted">先在「屏蔽列表」里建一个列表，才能开始专注。</span>
+      )}
     </section>
   );
 }

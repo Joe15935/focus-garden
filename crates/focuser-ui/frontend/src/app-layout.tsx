@@ -20,6 +20,7 @@ import { HealthBanner } from "@/garden/health";
 import { countdown, useGarden } from "@/garden/api";
 import { useApplySavedLanguage } from "@/lib/language";
 import { isTauri } from "@/lib/transport";
+import { StudyBackground } from "@/study/mirror-sync";
 
 const NAV = [
   { to: "/", label: "今天", icon: Sprout },
@@ -76,6 +77,7 @@ export function AppLayout() {
   return (
     <div className="garden-app-shell">
       <GardenTheme />
+      {isTauri() && <StudyBackground />}
       <nav className="garden-sidebar" aria-label="主要导航">
         <NavLink to="/" className="garden-brand">
           <span className="garden-brand-icon">
