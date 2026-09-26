@@ -159,6 +159,17 @@ pub fn run_command(
     Ok(result)
 }
 
+/// The same check the home page relies on: a focus session must name a real block list.
+pub(crate) fn ensure_block_list(state: &crate::AppState, list_id: &str) -> Result<(), String> {
+    let engine = state.engine.lock().map_err(|_| "无法读取屏蔽列表。")?;
+    let id = uuid::Uuid::parse_str(list_id).map_err(|_| "请选择屏蔽列表。")?;
+    engine
+        .db()
+        .get_block_list(id)
+        .map_err(|_| "屏蔽列表已不存在，请重新选择。")?;
+    Ok(())
+}
+
 #[tauri::command(async)]
 pub fn garden_command(
     app: AppHandle,
@@ -175,14 +186,7 @@ pub fn garden_command(
         "start" => {
             let request: StartRequest =
                 serde_json::from_value(command.args).map_err(|_| "专注设置不完整。")?;
-            {
-                let engine = state.engine.lock().map_err(|_| "无法读取屏蔽列表。")?;
-                let id = uuid::Uuid::parse_str(&request.list_id).map_err(|_| "请选择屏蔽列表。")?;
-                engine
-                    .db()
-                    .get_block_list(id)
-                    .map_err(|_| "屏蔽列表已不存在，请重新选择。")?;
-            }
+            ensure_block_list(&state, &request.list_id)?;
             to_json(service.start(request).map_err(|e| e.to_string())?)
         }
         "request_exit" => to_json(service.request_exit().map_err(|e| e.to_string())?),

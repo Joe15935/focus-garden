@@ -2,6 +2,7 @@
 
 mod garden_bridge;
 mod mac_guard;
+mod study_bridge;
 
 use focuser_core::{BlockEngine, Database, garden::GardenService};
 use std::path::PathBuf;
@@ -68,6 +69,7 @@ fn main() {
             garden_bridge::set_autostart,
             garden_bridge::save_configuration,
             garden_bridge::pick_import_file,
+            study_bridge::study_command,
         ])
         .setup(move |app| {
             let directory = data_dir();
@@ -92,6 +94,10 @@ fn main() {
             let garden: GardenState = Arc::new(Mutex::new(
                 GardenService::open(directory.join("garden.sqlite3")).expect("无法读取花园记录"),
             ));
+            // Study data sits in its own file; failing to open it never blocks the garden.
+            let study: study_bridge::StudyState =
+                Arc::new(Mutex::new(study_bridge::StudyHandle::open(&directory)));
+            app.manage(study);
             let setup_state = state.clone();
             let setup_garden = garden.clone();
             app.manage(state);

@@ -16,6 +16,7 @@ import { BlockLists } from "@/routes/block-lists";
 import { Dashboard } from "@/routes/dashboard";
 import { Schedule } from "@/routes/schedule";
 import { Settings } from "@/routes/settings";
+import { Study } from "@/routes/study";
 import { Websites } from "@/routes/websites";
 
 const queryClient = new QueryClient({
@@ -46,6 +47,7 @@ const router = createHashRouter([
       { path: "block-lists", element: <BlockLists /> },
       { path: "websites", element: <Websites /> },
       { path: "apps", element: <Apps /> },
+      { path: "study", element: <Study /> },
       { path: "schedule", element: <Schedule /> },
       { path: "allowances", element: <Allowances /> },
       // Split out: the charting library is a third of the bundle and most

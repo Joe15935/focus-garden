@@ -3,6 +3,7 @@ import {
   BarChart3,
   CalendarClock,
   Globe,
+  GraduationCap,
   Hourglass,
   Leaf,
   ListChecks,
@@ -23,6 +24,7 @@ import { isTauri } from "@/lib/transport";
 const NAV = [
   { to: "/", label: "今天", icon: Sprout },
   { to: "/garden", label: "我的花园", icon: Leaf },
+  { to: "/study", label: "学习导航", icon: GraduationCap },
   { to: "/statistics", label: "专注足迹", icon: BarChart3 },
   { to: "/block-lists", label: "屏蔽列表", icon: ListChecks },
   { to: "/apps", label: "应用限制", icon: AppWindow },
@@ -92,7 +94,7 @@ export function AppLayout() {
               to={to}
               end={to === "/"}
               className={({ isActive }) =>
-                `garden-nav-item ${isActive ? "active" : ""} ${index === 3 ? "garden-nav-divider" : ""}`
+                `garden-nav-item ${isActive ? "active" : ""} ${index === 4 ? "garden-nav-divider" : ""}`
               }
             >
               {({ isActive }) => (
