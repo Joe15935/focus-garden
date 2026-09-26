@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Session } from "@/garden/api";
@@ -262,6 +262,62 @@ describe("学习导航 page", () => {
     vi.setSystemTime(new Date("2026-10-03T00:30:00Z"));
     render(wrap(<Study />));
     expect(await screen.findByText(/休息日：不安排备考/)).toBeInTheDocument();
+  });
+
+  it("a page left open overnight moves on to the new day by itself", async () => {
+    vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
+    vi.setSystemTime(new Date("2026-09-28T15:59:50Z")); // Monday 23:59:50 in Shanghai
+    render(wrap(<Study />));
+    const picker = (await screen.findByLabelText("查看日期")) as HTMLInputElement;
+    expect(picker.value).toBe("2026-09-28");
+    vi.setSystemTime(new Date("2026-09-28T16:00:20Z")); // Tuesday 00:00:20
+    act(() => {
+      vi.advanceTimersByTime(30_000);
+    });
+    await waitFor(() =>
+      expect((screen.getByLabelText("查看日期") as HTMLInputElement).value).toBe("2026-09-29"),
+    );
+  });
+
+  it("a date the user turned to on purpose is kept across midnight", async () => {
+    vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"] });
+    vi.setSystemTime(new Date("2026-09-28T15:59:50Z"));
+    render(wrap(<Study />));
+    fireEvent.click(await screen.findByRole("button", { name: "后一天" }));
+    fireEvent.click(screen.getByRole("button", { name: "后一天" }));
+    expect((screen.getByLabelText("查看日期") as HTMLInputElement).value).toBe("2026-09-30");
+    vi.setSystemTime(new Date("2026-09-28T16:00:20Z"));
+    act(() => {
+      vi.advanceTimersByTime(30_000);
+    });
+    expect((screen.getByLabelText("查看日期") as HTMLInputElement).value).toBe("2026-09-30");
+  });
+
+  it("a winter or summer break is created in one step as a no-class term", async () => {
+    render(wrap(<Study />));
+    fireEvent.click(await screen.findByRole("button", { name: "课表" }));
+    fireEvent.click(await screen.findByRole("button", { name: /新建学期/ }));
+    const check = screen.getByLabelText(/这是寒暑假/);
+    fireEvent.click(check);
+    const form = check.closest(".study-form") as HTMLElement;
+    expect(within(form).queryByLabelText(/第 1 周周一/)).toBeNull();
+    fireEvent.change(within(form).getByPlaceholderText("例如 2027 寒假"), {
+      target: { value: "2027 寒假" },
+    });
+    fireEvent.change(within(form).getByLabelText(/开始/), { target: { value: "2027-01-06" } });
+    fireEvent.change(within(form).getByLabelText(/结束/), { target: { value: "2027-03-07" } });
+    fireEvent.click(within(form).getByRole("button", { name: "创建" }));
+    await waitFor(() => expect(studyCalls("save_doc")).toHaveLength(1));
+    const saved = studyCalls("save_doc")[0]?.[1].command.args.doc.semesters;
+    expect(saved).toHaveLength(2);
+    expect(saved[1]).toMatchObject({
+      name: "2027 寒假",
+      start: "2027-01-06",
+      end: "2027-03-07",
+      firstMonday: "2027-01-04",
+      vacation: true,
+      rules: [],
+    });
   });
 
   it("the reviews tab only extends intervals for closed-book, source-checked answers", async () => {

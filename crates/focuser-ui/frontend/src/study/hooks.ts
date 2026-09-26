@@ -1,7 +1,45 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { STUDY_KEY, studyCommand } from "./api";
 import * as C from "./core";
-import { newId, type StudyDoc, type StudyEvent, type StudySnapshot, validateDoc } from "./model";
+import {
+  localMinutes,
+  localToday,
+  newId,
+  type StudyDoc,
+  type StudyEvent,
+  type StudySnapshot,
+  validateDoc,
+} from "./model";
+
+export interface Clock {
+  /** Beijing date, YYYY-MM-DD. */
+  today: string;
+  /** Minutes since Beijing midnight. */
+  minutes: number;
+}
+
+/**
+ * Beijing date and minute, re-read every half minute. The app stays open for
+ * days (it starts at login and closing only hides the window), so anything that
+ * depends on "today" or "now" must follow the clock instead of the mount time.
+ */
+export function useClock(intervalMs = 30_000): Clock {
+  const [clock, setClock] = useState<Clock>(() => ({
+    today: localToday(),
+    minutes: localMinutes(),
+  }));
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const next = { today: localToday(), minutes: localMinutes() };
+      setClock((prev) =>
+        prev.today === next.today && prev.minutes === next.minutes ? prev : next,
+      );
+    }, intervalMs);
+    return () => window.clearInterval(id);
+  }, [intervalMs]);
+  return clock;
+}
 
 /** Saves a whole settings document against the revision it was edited from. */
 export function useSaveDoc(snapshot: StudySnapshot) {

@@ -101,6 +101,12 @@ export interface Semester {
   holidays?: Holiday[];
   /** Make-up days: `date` runs the class schedule of `followsDate` (e.g. 周六补周三的课). */
   swaps?: ScheduleSwap[];
+  /**
+   * A break such as 寒假 or 暑假: every date in range is known and has no classes.
+   * Where it overlaps a regular semester, the regular semester wins, so the
+   * break's end date can be left generous until the next term is known.
+   */
+  vacation?: boolean;
 }
 export interface Holiday {
   from: string;
@@ -368,22 +374,27 @@ export function calendarForDate(
   parseDate(date);
   assertInteger(arrivalBuffer, 0, 30, "到课缓冲");
   const matches = semesters.filter((s) => s.start <= date && date <= s.end);
-  if (matches.length !== 1)
+  // A break yields to a regular semester that overlaps it; two regular
+  // semesters overlapping stay ambiguous rather than guessed.
+  const regular = matches.filter((s) => !s.vacation);
+  const candidates = regular.length ? regular : matches.slice(0, 1);
+  if (candidates.length !== 1)
     return {
       date,
       known: false,
       week: null,
       blocks: [],
       warnings: [
-        matches.length
+        candidates.length
           ? "学期范围重叠，先选择唯一有效课表。"
-          : "尚未导入或确认这个日期的课表；不能当作无课日。",
+          : "尚未导入或确认这个日期的课表；不能当作无课日。放假的话，在「课表」新建学期时勾选「寒暑假」。",
       ],
     };
-  const s = matches[0];
+  const s = candidates[0];
   const errs = validateSemester(s);
   if (errs.length) return { date, known: false, week: null, blocks: [], warnings: errs };
   const week = Math.floor(daysBetween(s.firstMonday, date) / 7) + 1;
+  if (s.vacation) return { date, known: true, week, blocks: [], warnings: [`${s.name}：不上课`] };
   const holiday = (s.holidays ?? []).find((h) => h.from <= date && date <= h.until);
   if (holiday)
     return { date, known: true, week, blocks: [], warnings: [`${holiday.reason}：不上课`] };

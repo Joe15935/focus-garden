@@ -43,6 +43,13 @@ export function CalendarPanel({ snapshot, doc }: { snapshot: StudySnapshot; doc:
   const semester = doc.semesters.find((s) => s.id === selected) ?? null;
   const update = (next: C.Semester) =>
     save.mutate({ ...doc, semesters: doc.semesters.map((s) => (s.id === next.id ? next : s)) });
+  const remove = (id: string) => {
+    const rest = doc.semesters.filter((s) => s.id !== id);
+    save.mutate(
+      { ...doc, semesters: rest },
+      { onSuccess: () => setSelected(rest[rest.length - 1]?.id ?? "") },
+    );
+  };
 
   return (
     <div className="study-calendar">
@@ -57,14 +64,15 @@ export function CalendarPanel({ snapshot, doc }: { snapshot: StudySnapshot; doc:
           >
             {doc.semesters.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.name}（{s.start} 至 {s.end}）
+                {s.name}（{s.vacation ? "寒暑假 · " : ""}
+                {s.start} 至 {s.end}）
               </option>
             ))}
             {!doc.semesters.length && <option value="">还没有学期</option>}
           </select>
         </div>
         <p className="garden-muted">
-          换学期时新建一个学期再导入课表；旧学期、课程进度、复习卡和记录都保留。没有确认的周不会被当作空闲。
+          换学期时新建一个学期再导入课表；旧学期、课程进度、复习卡和记录都保留。没有确认的周不会被当作空闲。放寒暑假时新建一个学期并勾选「寒暑假」，那段时间就按没有课来安排。
         </p>
         <NewSemester
           onCreate={(s) => {
@@ -76,10 +84,32 @@ export function CalendarPanel({ snapshot, doc }: { snapshot: StudySnapshot; doc:
         />
       </section>
 
-      {semester && (
+      {semester?.vacation && (
+        <section className="study-card">
+          <h2>{semester.name}</h2>
+          <p className="garden-muted">
+            寒暑假：{semester.start} 至 {semester.end}{" "}
+            每天都按没有课来安排学习（休息日照旧）。和正式学期重叠的日子，以正式学期的课表为准。
+          </p>
+          <SemesterEdit
+            key={`${semester.id}-${semester.start}-${semester.end}`}
+            semester={semester}
+            onSave={update}
+            onDelete={() => remove(semester.id)}
+          />
+        </section>
+      )}
+
+      {semester && !semester.vacation && (
         <>
           <section className="study-card">
             <h2>{semester.name}</h2>
+            <SemesterEdit
+              key={`${semester.id}-${semester.start}-${semester.end}`}
+              semester={semester}
+              onSave={update}
+              onDelete={() => remove(semester.id)}
+            />
             <p className="garden-muted">
               第 1 周周一：{semester.firstMonday} · 已确认周次：
               {semester.confirmedWeeks.join("、") || "无"}
@@ -418,12 +448,22 @@ function ConfirmWeeks({
   );
 }
 
+/** The Monday on or before `date`, or "" when the date is not filled in yet. */
+function mondayOrBlank(date: string): string {
+  try {
+    return mondayOf(date);
+  } catch {
+    return "";
+  }
+}
+
 function NewSemester({ onCreate }: { onCreate: (s: C.Semester) => void }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [firstMonday, setFirstMonday] = useState("");
+  const [vacation, setVacation] = useState(false);
   const [error, setError] = useState<unknown>(null);
   if (!open)
     return (
@@ -433,9 +473,17 @@ function NewSemester({ onCreate }: { onCreate: (s: C.Semester) => void }) {
     );
   return (
     <div className="study-form">
+      <label className="study-check">
+        <input type="checkbox" checked={vacation} onChange={(e) => setVacation(e.target.checked)} />{" "}
+        这是寒暑假（整段没有课，照常安排学习）
+      </label>
       <label>
         名称{" "}
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="例如 2027 春" />
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder={vacation ? "例如 2027 寒假" : "例如 2027 春"}
+        />
       </label>
       <label>
         开始 <input type="date" value={start} onChange={(e) => setStart(e.target.value)} />
@@ -443,10 +491,17 @@ function NewSemester({ onCreate }: { onCreate: (s: C.Semester) => void }) {
       <label>
         结束 <input type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
       </label>
-      <label>
-        第 1 周周一{" "}
-        <input type="date" value={firstMonday} onChange={(e) => setFirstMonday(e.target.value)} />
-      </label>
+      {!vacation && (
+        <label>
+          第 1 周周一{" "}
+          <input type="date" value={firstMonday} onChange={(e) => setFirstMonday(e.target.value)} />
+        </label>
+      )}
+      {vacation && (
+        <p className="garden-muted">
+          结束日期不确定可以先填晚一点：之后新建的正式学期会自动接管重叠的日子。
+        </p>
+      )}
       <div className="garden-inline-actions">
         <button
           type="button"
@@ -454,15 +509,16 @@ function NewSemester({ onCreate }: { onCreate: (s: C.Semester) => void }) {
           onClick={() => {
             const s: C.Semester = {
               id: `term-${newId().slice(0, 8)}`,
-              name: name.trim() || "新学期",
+              name: name.trim() || (vacation ? "假期" : "新学期"),
               start,
               end,
-              firstMonday,
+              firstMonday: vacation ? mondayOrBlank(start) : firstMonday,
               confirmedWeeks: [],
               confirmedDates: [],
               rules: [],
               exceptions: [],
               notes: [],
+              ...(vacation ? { vacation: true } : {}),
             };
             const errors = C.validateSemester(s);
             if (errors.length) return setError(new Error(errors.join("；")));
@@ -471,6 +527,78 @@ function NewSemester({ onCreate }: { onCreate: (s: C.Semester) => void }) {
           }}
         >
           创建
+        </button>
+        <button
+          type="button"
+          className="garden-button secondary small"
+          onClick={() => setOpen(false)}
+        >
+          取消
+        </button>
+      </div>
+      <GardenError error={error} />
+    </div>
+  );
+}
+
+/** Fix a term's first or last day later, or remove a term created by mistake. */
+function SemesterEdit({
+  semester,
+  onSave,
+  onDelete,
+}: {
+  semester: C.Semester;
+  onSave: (s: C.Semester) => void;
+  onDelete: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [start, setStart] = useState(semester.start);
+  const [end, setEnd] = useState(semester.end);
+  const [error, setError] = useState<unknown>(null);
+  if (!open)
+    return (
+      <div className="garden-inline-actions">
+        <button
+          type="button"
+          className="garden-button secondary small"
+          onClick={() => {
+            setStart(semester.start);
+            setEnd(semester.end);
+            setError(null);
+            setOpen(true);
+          }}
+        >
+          修改起止日期
+        </button>
+        <DeleteButton label={`删除「${semester.name}」`} onConfirm={onDelete} />
+      </div>
+    );
+  return (
+    <div className="study-form">
+      <label>
+        开始 <input type="date" value={start} onChange={(e) => setStart(e.target.value)} />
+      </label>
+      <label>
+        结束 <input type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
+      </label>
+      <div className="garden-inline-actions">
+        <button
+          type="button"
+          className="garden-button small"
+          onClick={() => {
+            const next: C.Semester = {
+              ...semester,
+              start,
+              end,
+              firstMonday: semester.vacation ? mondayOrBlank(start) : semester.firstMonday,
+            };
+            const errors = C.validateSemester(next);
+            if (errors.length) return setError(new Error(errors.join("；")));
+            onSave(next);
+            setOpen(false);
+          }}
+        >
+          保存
         </button>
         <button
           type="button"

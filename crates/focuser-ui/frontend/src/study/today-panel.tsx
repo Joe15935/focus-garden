@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, ChevronLeft, ChevronRight, Download, Play, RotateCcw } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { create } from "zustand";
 import {
   GARDEN_KEY,
@@ -16,7 +16,15 @@ import { ActiveSession } from "@/routes/dashboard";
 import { STUDY_KEY, studyCommand, usePlan, useStartTask } from "./api";
 import * as C from "./core";
 import { buildTaskStart, STUDY_CATEGORIES } from "./garden-adapter";
-import { makeEvent, mondayOf, saveText, useAppendEvent, useSaveDoc, weekdayName } from "./hooks";
+import {
+  makeEvent,
+  mondayOf,
+  saveText,
+  useAppendEvent,
+  useClock,
+  useSaveDoc,
+  weekdayName,
+} from "./hooks";
 import {
   acceptedPlan,
   diffPlans,
@@ -26,7 +34,6 @@ import {
   type LectureSlot,
   lectureSlots,
   localMinutes,
-  localToday,
   planInputKey,
   planningPolicy,
   STATUS_TEXT,
@@ -52,8 +59,17 @@ export function TodayPanel({
   doc: StudyDoc;
   goTo: (tab: Tab) => void;
 }) {
-  const today = localToday();
+  const { today } = useClock();
   const [date, setDate] = useState(today);
+  // After midnight a page left open on "today" moves on to the new day;
+  // a page the user deliberately turned to another date stays there.
+  const shownToday = useRef(today);
+  useEffect(() => {
+    if (shownToday.current === today) return;
+    const previous = shownToday.current;
+    shownToday.current = today;
+    setDate((d) => (d === previous ? today : d));
+  }, [today]);
   const garden = useGarden();
   const policy = useMemo(
     () => planningPolicy(doc, snapshot.events, date),
@@ -391,8 +407,8 @@ function Timeline({
   const lists = useBlockLists();
   const { listId, strict, setListId, setStrict } = useFocusChoice();
   const selected = lists.data?.find((l) => l.id === listId)?.id ?? lists.data?.[0]?.id ?? "";
-  const today = localToday();
-  const now = date === today ? localMinutes() : -1;
+  const clock = useClock();
+  const now = date === clock.today ? clock.minutes : -1;
   const byId = new Map(blocks.map((b) => [b.id, b]));
   const shown = new Set<string>();
 
@@ -992,7 +1008,7 @@ function NextUp({
   const lists = useBlockLists();
   const { listId, strict } = useFocusChoice();
   const selected = lists.data?.find((l) => l.id === listId)?.id ?? lists.data?.[0]?.id ?? "";
-  const now = localMinutes();
+  const now = useClock().minutes;
   const open = blocks
     .filter((b) => !b.fixed && STUDY_CATEGORIES.has(b.category))
     .filter(

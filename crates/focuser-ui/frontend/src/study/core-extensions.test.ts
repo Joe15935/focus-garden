@@ -317,3 +317,72 @@ describe("skipping lectures on overfull days", () => {
     expect(plan.status).not.toBe("FEASIBLE");
   });
 });
+
+describe("寒暑假", () => {
+  const winter = (): C.Semester => ({
+    id: "winter",
+    name: "2027 寒假",
+    start: "2027-01-04",
+    end: "2027-03-07",
+    firstMonday: "2027-01-04",
+    confirmedWeeks: [],
+    confirmedDates: [],
+    rules: [],
+    exceptions: [],
+    vacation: true,
+  });
+  const spring = (): C.Semester => ({
+    ...term(),
+    id: "spring",
+    name: "2027 春",
+    start: "2027-02-22",
+    end: "2027-07-04",
+    firstMonday: "2027-02-22",
+    confirmedWeeks: [1, 2],
+    rules: [
+      {
+        ...(term().rules[0] as C.CalendarRule),
+        id: "spring-wed",
+        from: "2027-02-22",
+        until: "2027-07-04",
+      },
+    ],
+  });
+
+  it("every day of a break is known and has no classes", () => {
+    const day = C.calendarForDate([term(), winter()], "2027-01-13");
+    expect(day.known).toBe(true);
+    expect(day.blocks).toEqual([]);
+    expect(day.warnings.join()).toMatch(/寒假/);
+  });
+
+  it("a weekday in the break gets the full study day", () => {
+    const plan = C.planDay(policy(), [term(), winter()], "2027-01-13", { maxNodes: 3000 });
+    expect(plan.status).toBe("FEASIBLE");
+    expect(plan.blocks.filter((b) => b.category === "law-video")).toHaveLength(3);
+  });
+
+  it("the rest day stays a rest day during the break", () => {
+    expect(C.planDay(policy(), [winter()], "2027-01-16").status).toBe("REST_NEEDS_WINDOW");
+  });
+
+  it("a regular term overlapping the break takes over those days", () => {
+    const day = C.calendarForDate([term(), winter(), spring()], "2027-02-24");
+    expect(day.known).toBe(true);
+    expect(day.blocks.map((b) => b.title)).toEqual(["周三课"]);
+    // Before the new term starts the break still applies.
+    expect(C.calendarForDate([winter(), spring()], "2027-02-17").blocks).toEqual([]);
+  });
+
+  it("two regular terms overlapping stay ambiguous instead of guessed", () => {
+    const day = C.calendarForDate([spring(), { ...spring(), id: "copy" }], "2027-02-24");
+    expect(day.known).toBe(false);
+    expect(day.warnings.join()).toMatch(/重叠/);
+  });
+
+  it("a date outside every term says how to mark a break", () => {
+    const day = C.calendarForDate([term()], "2027-01-13");
+    expect(day.known).toBe(false);
+    expect(day.warnings.join()).toMatch(/寒暑假/);
+  });
+});

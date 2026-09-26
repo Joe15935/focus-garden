@@ -1,11 +1,12 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef } from "react";
 import { create } from "zustand";
-import { studyCommand, usePlan, useStudy } from "./api";
+import { STUDY_KEY, studyCommand, usePlan, useStudy } from "./api";
 import * as C from "./core";
+import { useClock } from "./hooks";
 import { mirrorHtml, mirrorIcs } from "./mirror";
 import {
   acceptedPlan,
-  localToday,
   planInputKey,
   planningPolicy,
   remainingLectures,
@@ -27,20 +28,43 @@ export const useMirrorStatus = create<{ status: MirrorStatus; set: (s: MirrorSta
  */
 export function StudyBackground() {
   const study = useStudy();
+  const { today } = useClock();
+  useDailyRefresh(today);
   const snapshot = study.data;
   if (!snapshot?.doc || !snapshot.mirror_dir) return null;
-  return <MirrorWriter snapshot={snapshot} doc={snapshot.doc} />;
+  return <MirrorWriter snapshot={snapshot} doc={snapshot.doc} today={today} />;
 }
 
-function MirrorWriter({ snapshot, doc }: { snapshot: StudySnapshot; doc: StudyDoc }) {
-  useMirrorSync(snapshot, doc);
+/**
+ * On a new Beijing day, reload the study data even if the window stays hidden:
+ * that runs the daily backup and lets the phone copy start from the new day.
+ */
+function useDailyRefresh(today: string) {
+  const query = useQueryClient();
+  const seen = useRef(today);
+  useEffect(() => {
+    if (seen.current === today) return;
+    seen.current = today;
+    void query.invalidateQueries({ queryKey: STUDY_KEY });
+  }, [today, query]);
+}
+
+function MirrorWriter({
+  snapshot,
+  doc,
+  today,
+}: {
+  snapshot: StudySnapshot;
+  doc: StudyDoc;
+  today: string;
+}) {
+  useMirrorSync(snapshot, doc, today);
   return null;
 }
 
-function useMirrorSync(snapshot: StudySnapshot, doc: StudyDoc) {
+function useMirrorSync(snapshot: StudySnapshot, doc: StudyDoc, today: string) {
   const setStatus = useMirrorStatus((s) => s.set);
   const last = useRef("");
-  const today = localToday();
   const request = useMemo<PlanRequest | null>(
     () =>
       snapshot.mirror_dir

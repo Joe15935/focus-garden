@@ -159,6 +159,15 @@
   flex-direction: column;
   gap: 5px;
 }
+.study-form label.study-check {
+  flex-direction: row;
+  align-items: center;
+  flex-basis: 100%;
+}
+.study-form > p {
+  flex-basis: 100%;
+  margin: 0;
+}
 .study-form.grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
