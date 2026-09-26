@@ -156,6 +156,20 @@ export const STATUS_TEXT: Record<C.DayPlan["status"], string> = {
   REST_NEEDS_WINDOW: "休息日：不安排备考，跑步时段需要你确认",
 };
 
+/**
+ * Which term the timetable page opens on: the one covering `today` (a regular
+ * term over an overlapping break), else the next one to start, else the latest.
+ */
+export function defaultSemesterId(semesters: C.Semester[], today: string): string {
+  const covering = semesters.filter((s) => s.start <= today && today <= s.end);
+  const current = covering.find((s) => !s.vacation) ?? covering[0];
+  if (current) return current.id;
+  const upcoming = semesters
+    .filter((s) => s.start > today)
+    .sort((a, b) => a.start.localeCompare(b.start))[0];
+  return upcoming?.id ?? semesters[semesters.length - 1]?.id ?? "";
+}
+
 export function localToday(now = new Date()): string {
   return C.localToday(now, TIMEZONE);
 }

@@ -320,6 +320,56 @@ describe("学习导航 page", () => {
     });
   });
 
+  it("each term shows its own confirmed weeks when switching, so saving never mixes them up", async () => {
+    const d = doc();
+    d.semesters.push({
+      id: "next",
+      name: "下学期",
+      start: "2027-02-22",
+      end: "2027-07-25",
+      firstMonday: "2027-02-22",
+      confirmedWeeks: [],
+      confirmedDates: [],
+      rules: [],
+      exceptions: [],
+    });
+    study = snapshot({ doc: d });
+    render(wrap(<Study />));
+    fireEvent.click(await screen.findByRole("button", { name: "课表" }));
+    const weeks = () => screen.getByLabelText(/已核对的周次/) as HTMLInputElement;
+    // Opens on the term covering today, not the one created last.
+    expect(await screen.findByRole("heading", { name: "合成学期" })).toBeInTheDocument();
+    expect(weeks().value).toBe("4,5,6");
+    fireEvent.change(screen.getByLabelText("选择学期"), { target: { value: "next" } });
+    expect(await screen.findByRole("heading", { name: "下学期" })).toBeInTheDocument();
+    expect(weeks().value).toBe("");
+    fireEvent.change(screen.getByLabelText("选择学期"), { target: { value: "synthetic" } });
+    expect(await screen.findByRole("heading", { name: "合成学期" })).toBeInTheDocument();
+    expect(weeks().value).toBe("4,5,6");
+  });
+
+  it("the new-term form starts blank again after creating a term", async () => {
+    render(wrap(<Study />));
+    fireEvent.click(await screen.findByRole("button", { name: "课表" }));
+    fireEvent.click(await screen.findByRole("button", { name: /新建学期/ }));
+    fireEvent.click(screen.getByLabelText(/这是寒暑假/));
+    fireEvent.change(screen.getByPlaceholderText("例如 2027 寒假"), {
+      target: { value: "2027 寒假" },
+    });
+    const form = () => (screen.getByLabelText(/这是寒暑假/) as HTMLElement).closest(".study-form");
+    fireEvent.change(within(form() as HTMLElement).getByLabelText(/开始/), {
+      target: { value: "2027-01-18" },
+    });
+    fireEvent.change(within(form() as HTMLElement).getByLabelText(/结束/), {
+      target: { value: "2027-02-21" },
+    });
+    fireEvent.click(within(form() as HTMLElement).getByRole("button", { name: "创建" }));
+    await waitFor(() => expect(studyCalls("save_doc")).toHaveLength(1));
+    fireEvent.click(await screen.findByRole("button", { name: /新建学期/ }));
+    expect(screen.getByLabelText(/这是寒暑假/)).not.toBeChecked();
+    expect((screen.getByPlaceholderText("例如 2027 春") as HTMLInputElement).value).toBe("");
+  });
+
   it("the reviews tab only extends intervals for closed-book, source-checked answers", async () => {
     study = snapshot({
       reviews: [

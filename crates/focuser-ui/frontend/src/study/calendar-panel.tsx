@@ -5,7 +5,7 @@ import * as C from "./core";
 import { mondayOf, pickText, useSaveDoc, weekdayName } from "./hooks";
 import { expandIcs, parseIcs, type RuleDraft, rulesFromOccurrences } from "./ics";
 import { ImportPreview } from "./import-preview";
-import { localToday, newId, type StudyDoc, type StudySnapshot } from "./model";
+import { defaultSemesterId, localToday, newId, type StudyDoc, type StudySnapshot } from "./model";
 import { importScreenshots } from "./screenshots";
 
 const PLACES = C.PLACES.map((p) => ({ value: p, label: C.PLACE_NAMES[p] }));
@@ -39,7 +39,8 @@ export function CalendarPanel({ snapshot, doc }: { snapshot: StudySnapshot; doc:
     weeks: number[];
     confirm: boolean;
   } | null>(null);
-  const [selected, setSelected] = useState(doc.semesters[doc.semesters.length - 1]?.id ?? "");
+  const [selected, setSelected] = useState(() => defaultSemesterId(doc.semesters, localToday()));
+  const ordered = [...doc.semesters].sort((a, b) => a.start.localeCompare(b.start));
   const semester = doc.semesters.find((s) => s.id === selected) ?? null;
   const update = (next: C.Semester) =>
     save.mutate({ ...doc, semesters: doc.semesters.map((s) => (s.id === next.id ? next : s)) });
@@ -47,7 +48,7 @@ export function CalendarPanel({ snapshot, doc }: { snapshot: StudySnapshot; doc:
     const rest = doc.semesters.filter((s) => s.id !== id);
     save.mutate(
       { ...doc, semesters: rest },
-      { onSuccess: () => setSelected(rest[rest.length - 1]?.id ?? "") },
+      { onSuccess: () => setSelected(defaultSemesterId(rest, localToday())) },
     );
   };
 
@@ -62,7 +63,7 @@ export function CalendarPanel({ snapshot, doc }: { snapshot: StudySnapshot; doc:
             onChange={(e) => setSelected(e.target.value)}
             aria-label="选择学期"
           >
-            {doc.semesters.map((s) => (
+            {ordered.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}（{s.vacation ? "寒暑假 · " : ""}
                 {s.start} 至 {s.end}）
@@ -118,6 +119,7 @@ export function CalendarPanel({ snapshot, doc }: { snapshot: StudySnapshot; doc:
                 : ""}
             </p>
             <ConfirmWeeks
+              key={`${semester.id}-${semester.confirmedWeeks.join(",")}`}
               semester={semester}
               onSave={(weeks) => update({ ...semester, confirmedWeeks: weeks })}
               onError={setError}
@@ -523,6 +525,13 @@ function NewSemester({ onCreate }: { onCreate: (s: C.Semester) => void }) {
             const errors = C.validateSemester(s);
             if (errors.length) return setError(new Error(errors.join("；")));
             onCreate(s);
+            // The next "新建学期" starts from a blank form, not this term's values.
+            setName("");
+            setStart("");
+            setEnd("");
+            setFirstMonday("");
+            setVacation(false);
+            setError(null);
             setOpen(false);
           }}
         >

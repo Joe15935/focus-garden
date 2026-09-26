@@ -5,6 +5,7 @@ import {
   activeEvents,
   backupFromReference,
   blankDoc,
+  defaultSemesterId,
   diffPlans,
   englishFocus,
   lectureMinutes,
@@ -463,5 +464,38 @@ describe("derived planning helpers", () => {
     );
     expect(pace.recentPerStudyDay).toBeGreaterThan(0);
     expect(pace.plannedPerWeek).toBe(18);
+  });
+});
+
+describe("which term the timetable opens on", () => {
+  const term = (id: string, start: string, end: string, vacation = false): C.Semester => ({
+    id,
+    name: id,
+    start,
+    end,
+    firstMonday: "2026-08-31",
+    confirmedWeeks: [],
+    confirmedDates: [],
+    rules: [],
+    exceptions: [],
+    ...(vacation ? { vacation: true } : {}),
+  });
+  const terms = [
+    term("fall", "2026-09-21", "2027-01-17"),
+    term("summer", "2027-07-26", "2027-08-29", true),
+    term("spring", "2027-02-22", "2027-07-25"),
+    term("winter", "2027-01-18", "2027-03-07", true),
+  ];
+  it("opens the term covering today, even when later terms were created after it", () => {
+    expect(defaultSemesterId(terms, "2026-10-12")).toBe("fall");
+  });
+  it("prefers the regular term where a break overlaps it", () => {
+    expect(defaultSemesterId(terms, "2027-03-01")).toBe("spring");
+    expect(defaultSemesterId(terms, "2027-02-01")).toBe("winter");
+  });
+  it("between terms it opens the next one; after all of them the latest", () => {
+    expect(defaultSemesterId(terms, "2026-09-01")).toBe("fall");
+    expect(defaultSemesterId(terms, "2027-12-01")).toBe("winter");
+    expect(defaultSemesterId([], "2027-12-01")).toBe("");
   });
 });
